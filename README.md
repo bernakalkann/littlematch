@@ -16,13 +16,28 @@ LittleMatch; klasik bir dating uygulaması veya sıradan bir kişilik testi değ
 - [x] İlerleme göstergesi, geri dönüş ve cihazda kaldığı yerden devam
 - [x] Sonuç ekranında karakter profili ve ilişki haritası
 - [x] Reduced-motion desteği ve mobil breakpoint'ler
-- [ ] Manuel mobil/masaüstü görsel QA
-- [x] CI kalite kontrolünün ilk başarılı koşusu
+- [x] CI: lint + TypeScript + production build
+- [ ] Manuel mobil / masaüstü görsel QA
+
+### Aşama 2 — Supabase ve iki kişilik uyum
+Kod tarafı hazır; LittleMatch'e özel Supabase projesine uygulanmayı bekliyor.
+
+- [x] Supabase browser istemcisi ve environment değişkeni yapısı
+- [x] Anonim kullanıcı oturumu kodu
+- [x] Test oturumu / cevap / karakter sonucu kayıt servisi
+- [x] RLS içeren LittleMatch SQL şeması
+- [x] Davet kodunun düz metin yerine SHA-256 özetiyle saklanacağı güvenli tasarım
+- [x] Davet oluşturma, claim etme ve tamamlama API rotaları
+- [x] İki kişilik deterministik karşılaştırma algoritması
+- [x] İki kişilik uyum sonucu ekranı
+- [x] Davet linki ile uçtan uca birlikte oynama istemci akışı
+- [ ] SQL şemasını LittleMatch Supabase projesine uygulama
+- [ ] Supabase Anonymous Sign-Ins özelliğini etkinleştirme
+- [ ] Publishable / secret key'leri çalışma ortamına bağlama
+- [ ] RLS ve güvenlik advisor kontrolü
+- [ ] Gerçek iki tarayıcı / iki anonim kullanıcı ile E2E test
 
 ### Sonraki aşamalar
-- [ ] Supabase entegrasyonu ve anonim oturumlar
-- [ ] Test ve sonuç kayıtları
-- [ ] Davet bağlantıları ve iki kişilik karşılaştırma
 - [ ] Paylaşılabilir görsel sonuç kartları
 - [ ] 18+ anonim eşleşme ve karşılıklı tercih algoritması
 - [ ] Gerçek zamanlı anonim sohbet
@@ -38,7 +53,7 @@ npm install
 npm run dev
 ```
 
-Ardından tarayıcıdan Next.js'in gösterdiği yerel adresi aç.
+Supabase olmadan Aşama 1 tamamen yerel çalışır. Supabase özellikleri için önce `.env.example` dosyasını temel alarak yerel `.env.local` oluşturulmalıdır.
 
 Kalite kontrolleri:
 
@@ -48,15 +63,40 @@ npm run typecheck
 npm run build
 ```
 
-Aynı kontroller `.github/workflows/ci.yml` üzerinden GitHub Actions'ta da çalışacak şekilde yapılandırılmıştır.
+Aynı kontroller `.github/workflows/ci.yml` üzerinden GitHub Actions'ta da çalışır.
+
+## Supabase kurulumu
+
+LittleMatch için **ayrı Supabase projesi** kullanılmalıdır. fixCampus veritabanı ile paylaşılmamalıdır.
+
+1. Supabase projesinde **Anonymous Sign-Ins** etkinleştirilir.
+2. `database/littlematch-schema.sql` yalnızca LittleMatch veritabanına uygulanır.
+3. Security advisor çalıştırılır ve RLS uyarıları kontrol edilir.
+4. Proje URL'si ve publishable key istemci ortam değişkenlerine eklenir.
+5. Secret key yalnızca sunucu tarafında `SUPABASE_SECRET_KEY` olarak tutulur; hiçbir `NEXT_PUBLIC_` değişkenine yazılmaz.
+6. İki ayrı anonim kullanıcıyla test → davet → ikinci test → karşılaştırma akışı doğrulanır.
+
+Gerekli değişkenler:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+```
+
+Gerçek anahtarlar repoya commit edilmez.
 
 ## Mimari
 
-- `app/`: Next.js App Router, global görsel stiller ve metadata.
-- `components/`: ana sahne, oyun akışı, karakter illüstrasyonları ve sonuç ekranı.
+- `app/`: Next.js App Router, global stiller, metadata ve sunucu API rotaları.
+- `components/`: ana sahne, test akışı, karakter illüstrasyonları, bireysel ve iki kişilik sonuç ekranları.
 - `data/questions.ts`: 12 hikâyeleştirilmiş soru ve cevap ağırlıkları.
 - `data/characters.ts`: 8 karakterin açıklamaları ve hedef ilişki profilleri.
 - `lib/scoring.ts`: cevapları 7 boyuta normalize eden ve en yakın karakter profilini seçen deterministik algoritma.
+- `lib/comparison.ts`: iki kişinin boyut ve cevap benzerliğini hesaplayan karşılaştırma algoritması.
+- `lib/supabase/`: istemci, anonim auth ve test kayıt servisleri.
+- `lib/invitations/`: güvenli davet kodu ve istemci işlemleri.
+- `database/littlematch-schema.sql`: Supabase tablo, indeks, grant ve RLS politikaları.
 - `data/copy.ts`: temel TR/EN arayüz metinleri.
 
 Test soruları, karakter tanımları ve puanlama sistemi arayüz bileşenlerinden ayrı tutulur.
@@ -65,9 +105,9 @@ Test soruları, karakter tanımları ve puanlama sistemi arayüz bileşenlerinde
 
 Her cevap; duygusal derinlik, iletişim, romantik yaklaşım, güven ve bağlılık, kişisel alan, yenilik/macera ve gelecek odağı boyutlarına puan ekler.
 
-Puanlar soru seti içindeki mümkün maksimum değere göre 0–100 aralığına normalize edilir. Kullanıcının profil vektörü ile sekiz karakterin hedef profilleri arasındaki uzaklık hesaplanır; en yakın profil sonuç olarak seçilir. Bu nedenle sonuç rastgele değildir ve aynı cevaplar her zaman aynı karakteri üretir.
+Puanlar soru seti içindeki mümkün maksimum değere göre 0–100 aralığına normalize edilir. Kullanıcının profil vektörü ile sekiz karakterin hedef profilleri arasındaki uzaklık hesaplanır; en yakın profil sonuç olarak seçilir. Aynı cevaplar aynı karakteri üretir.
 
-Bu sonuç eğlence amaçlıdır; psikolojik değerlendirme, ilişki teşhisi veya ilişki başarısı tahmini olarak sunulmaz.
+İki kişilik sonuçta boyut benzerliği ile aynı cevapların oranı birlikte değerlendirilir. Bu yüzdeler yalnızca LittleMatch cevaplarının benzerliğini gösterir; ilişki başarısı veya bilimsel uyum tahmini değildir.
 
 ## Tasarım ilkesi
 
@@ -75,6 +115,6 @@ Referans görsel doğrudan statik arka plan olarak kullanılmaz. Aynı sıcak, o
 
 Sıradan SaaS/dashboard görünümü, aşırı kart kullanımı, neon/gradient ağırlığı, glassmorphism ve klasik dating-app kalıplarından kaçınılır.
 
-## Henüz gerçek olmayan özellikler
+## Şu anki blokaj
 
-Supabase, davet bağlantıları, iki kişilik güvenli karşılaştırma, anonim eşleşme ve sohbet **henüz bağlanmadı**. Arayüz bunları çalışıyormuş gibi sahte veriyle göstermiyor. Bu özellikler Aşama 2–4 kapsamında gerçek backend ve erişim politikalarıyla eklenecek.
+LittleMatch Supabase projesi oluşturuldu ancak bu sohbet oturumundaki Supabase bağlantısı yeni organizasyonu henüz araç erişimine yansıtmıyor. Bu nedenle SQL şeması veritabanına uygulanmadı ve gerçek backend testi yapılmadı. Kod bu bağlantı açıldığında devam edecek şekilde hazırdır.
