@@ -1,4 +1,20 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { CharacterId, DimensionKey } from "@/lib/types";
+
+export type PairResultData = {
+  ready: true;
+  overall_similarity: number;
+  dimension_similarity: Record<DimensionKey, number>;
+  common_answers: string[];
+  different_answers: string[];
+  character_a: CharacterId;
+  character_b: CharacterId;
+};
+
+export type PairWaitingData = {
+  ready: false;
+  status: string;
+};
 
 async function getAccessToken(): Promise<string> {
   const supabase = getSupabaseBrowserClient();
@@ -78,15 +94,17 @@ export async function completeInvitation(
   return response.json() as Promise<{ overallSimilarity: number }>;
 }
 
-export async function getInvitationResult(code: string): Promise<unknown> {
+export async function getInvitationResult(
+  code: string,
+): Promise<PairResultData | PairWaitingData> {
   const response = await authenticatedFetch(
     `/api/invitations/result?code=${encodeURIComponent(code)}`,
     { method: "GET" },
   );
 
-  if (!response.ok) {
+  if (!response.ok && response.status !== 202) {
     throw new Error(`INVITATION_RESULT_FAILED_${response.status}`);
   }
 
-  return response.json();
+  return response.json() as Promise<PairResultData | PairWaitingData>;
 }
