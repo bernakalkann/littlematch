@@ -16,6 +16,21 @@ export async function createRemoteTestSession(
   const user = await ensureAnonymousUser();
   if (!user) return null;
 
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      user_id: user.id,
+      locale,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (profileError) {
+    throw new Error("Remote profile could not be prepared.", {
+      cause: profileError,
+    });
+  }
+
   const { data, error } = await supabase
     .from("test_sessions")
     .insert({
@@ -51,6 +66,7 @@ export async function saveRemoteAnswer(
       user_id: session.userId,
       question_id: questionId,
       option_id: optionId,
+      updated_at: new Date().toISOString(),
     },
     { onConflict: "session_id,question_id" },
   );

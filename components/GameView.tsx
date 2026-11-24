@@ -6,11 +6,14 @@ import type { Locale } from "@/lib/types";
 import { LanguageToggle } from "./LanguageToggle";
 import { QuestionScene } from "./QuestionScene";
 
+type SyncState = "local" | "cloud" | "saving" | "error";
+
 type GameViewProps = {
   locale: Locale;
   index: number;
   selectedOption?: string;
-  onAnswer: (optionId: string) => void;
+  syncState: SyncState;
+  onAnswer: (optionId: string) => void | Promise<void>;
   onBack: () => void;
   onHome: () => void;
   onLocaleChange: (locale: Locale) => void;
@@ -20,6 +23,7 @@ export function GameView({
   locale,
   index,
   selectedOption,
+  syncState,
   onAnswer,
   onBack,
   onHome,
@@ -28,6 +32,14 @@ export function GameView({
   const t = copy[locale];
   const question = questions[index];
   const progress = Math.round(((index + 1) / questions.length) * 100);
+  const saveLabel =
+    syncState === "saving"
+      ? t.saving
+      : syncState === "error"
+        ? t.syncError
+        : syncState === "cloud"
+          ? t.cloudSaved
+          : t.saved;
 
   return (
     <main className="game-shell">
@@ -63,6 +75,7 @@ export function GameView({
               <button
                 key={option.id}
                 type="button"
+                disabled={syncState === "saving"}
                 className={
                   "answer-choice " +
                   (selectedOption === option.id ? "selected" : "")
@@ -82,11 +95,11 @@ export function GameView({
               type="button"
               className="text-action"
               onClick={onBack}
-              disabled={index === 0}
+              disabled={index === 0 || syncState === "saving"}
             >
               ← {t.back}
             </button>
-            <span className="save-note">✦ {t.saved}</span>
+            <span className={"save-note sync-" + syncState}>✦ {saveLabel}</span>
           </div>
         </div>
       </section>
