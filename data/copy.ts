@@ -20,7 +20,7 @@ export const copy = {
     home: "ana sayfa",
     choose: "Sana en yakın olanı seç.",
     saved: "ilerlemen bu cihazda saklanıyor",
-    cloudSaved: "ilerlemen güvenli oturumuna kaydediliyor",
+    cloudSaved: "ilerlemen güvenli oturuma kaydediliyor",
     saving: "seçimin kaydediliyor…",
     syncError: "bulut kaydı şu an kullanılamıyor; ilerlemen bu cihazda korunuyor",
     resultLoading: "Karakterin hazırlanıyor...",
