@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./experience.css";
+import "./result.css";
 
 export const metadata: Metadata = {
   title: "LittleMatch — Küçük seçimler, beklenmedik karşılaşmalar",

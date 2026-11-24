@@ -6,6 +6,7 @@ import type { Locale } from "@/lib/types";
 import type { AnswerMap } from "@/lib/scoring";
 import { GameView } from "./GameView";
 import { LandingView } from "./LandingView";
+import { ResultView } from "./ResultView";
 
 type Phase = "landing" | "game" | "result";
 
@@ -77,12 +78,10 @@ export function LittleMatchApp() {
     setIndex((current) => current + 1);
   };
 
-  const handleBack = () => {
-    setIndex((current) => Math.max(0, current - 1));
-  };
-
-  const handleHome = () => {
-    setPhase("landing");
+  const handleRestart = () => {
+    setAnswers({});
+    setIndex(0);
+    setPhase("game");
   };
 
   if (!hydrated) {
@@ -96,8 +95,8 @@ export function LittleMatchApp() {
         index={index}
         selectedOption={answers[questions[index].id]}
         onAnswer={handleAnswer}
-        onBack={handleBack}
-        onHome={handleHome}
+        onBack={() => setIndex((current) => Math.max(0, current - 1))}
+        onHome={() => setPhase("landing")}
         onLocaleChange={setLocale}
       />
     );
@@ -105,15 +104,17 @@ export function LittleMatchApp() {
 
   if (phase === "result") {
     return (
-      <main className="result-placeholder">
-        <button className="game-wordmark" type="button" onClick={handleHome}>
-          littlematch<span>✦</span>
-        </button>
-        <div>
-          <span className="result-spark">✦</span>
-          <p>{copyFallback(locale)}</p>
-        </div>
-      </main>
+      <ResultView
+        locale={locale}
+        answers={answers}
+        onLocaleChange={setLocale}
+        onRestart={handleRestart}
+        onReview={() => {
+          setIndex(questions.length - 1);
+          setPhase("game");
+        }}
+        onHome={() => setPhase("landing")}
+      />
     );
   }
 
@@ -124,8 +125,4 @@ export function LittleMatchApp() {
       onStart={() => setPhase("game")}
     />
   );
-}
-
-function copyFallback(locale: Locale) {
-  return locale === "tr" ? "Karakterin hazırlanıyor..." : "Preparing your character...";
 }
