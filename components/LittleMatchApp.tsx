@@ -2,21 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { questions } from "@/data/questions";
+import {
+  claimInvitation,
+  completeInvitation,
+  createInvitation,
+  getInvitationResult,
+  type PairResultData,
+} from "@/lib/invitations/client";
 import { getCharacterMatch, type AnswerMap } from "@/lib/scoring";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   completeRemoteTest,
   createRemoteTestSession,
   saveRemoteAnswer,
   type RemoteTestSession,
 } from "@/lib/supabase/test-storage";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
 import type { Locale } from "@/lib/types";
 import { GameView } from "./GameView";
 import { LandingView } from "./LandingView";
-import { ResultView } from "./ResultView";
+import { PairResultView } from "./PairResultView";
+import { ResultView, type InviteUiState } from "./ResultView";
 
-type Phase = "landing" | "game" | "result";
+type Phase = "landing" | "game" | "result" | "pair";
 type SyncState = "local" | "cloud" | "saving" | "error";
+type InviteRole = "creator" | "invitee" | null;
 
 type SavedSession = {
   locale?: Locale;
@@ -24,6 +33,8 @@ type SavedSession = {
   index?: number;
   answers?: AnswerMap;
   remoteSession?: RemoteTestSession | null;
+  activeInviteCode?: string | null;
+  inviteRole?: InviteRole;
 };
 
 const storageKey = "littlematch-session-v1";
@@ -38,11 +49,18 @@ export function LittleMatchApp() {
   const [syncState, setSyncState] = useState<SyncState>(
     isSupabaseConfigured() ? "cloud" : "local",
   );
+  const [activeInviteCode, setActiveInviteCode] = useState<string | null>(null);
+  const [inviteRole, setInviteRole] = useState<InviteRole>(null);
+  const [inviteState, setInviteState] = useState<InviteUiState>(
+    isSupabaseConfigured() ? "idle" : "unavailable",
+  );
+  const [pairResult, setPairResult] = useState<PairResultData | null>(null);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
       try {
         const raw = window.localStorage.getItem(storageKey);
+        const urlInviteCode = new URLSearchParams(window.location.search).get("invite");
 
         if (raw) {
           const saved = JSON.parse(raw) as SavedSession;
@@ -75,8 +93,24 @@ export function LittleMatchApp() {
             setRemoteSession(saved.remoteSession);
             setSyncState("cloud");
           }
+
+          if (saved.activeInviteCode && saved.inviteRole === "creator") {
+            setActiveInviteCode(saved.activeInviteCode);
+            setInviteRole("creator");
+            setInviteState("ready");
+          }
         } else if (navigator.language.toLowerCase().startsWith("en")) {
           setLocale("en");
+        }
+
+        if (urlInviteCode) {
+          setActiveInviteCode(urlInviteCode);
+          setInviteRole("invitee");
+          setInviteState(isSupabaseConfigured() ? "idle" : "unavailable");
+          setPhase("landing");
+          setIndex(0);
+          setAnswers({});
+          setRemoteSession(null);
         }
       } catch {
         setSyncState(isSupabaseConfigured() ? "error" : "local");
@@ -94,13 +128,24 @@ export function LittleMatchApp() {
 
     const session: SavedSession = {
       locale,
-      phase,
+      phase: phase === "pair" ? "result" : phase,
       index,
       answers,
       remoteSession,
+      activeInviteCode,
+      inviteRole,
     };
     window.localStorage.setItem(storageKey, JSON.stringify(session));
-  }, [answers, hydrated, index, locale, phase, remoteSession]);
+  }, [
+    activeInviteCode,
+    answers,
+    hydrated,
+    index,
+    inviteRole,
+    locale,
+    phase,
+    remoteSession,
+  ]);
 
   const prepareRemoteSession = async () => {
     if (!isSupabaseConfigured()) {
@@ -129,7 +174,17 @@ export function LittleMatchApp() {
 
   const handleStart = async () => {
     setPhase("game");
-    await prepareRemoteSession();
+    const session = await prepareRemoteSession();
+
+    if (inviteRole === "invitee" && activeInviteCode && session) {
+      try {
+        await claimInvitation(activeInviteCode);
+        setInviteState("ready");
+      } catch (error) {
+        console.error(error);
+        setInviteState("error");
+      }
+    }
   };
 
   const handleAnswer = async (optionId: string) => {
@@ -146,11 +201,19 @@ export function LittleMatchApp() {
 
         if (index === questions.length - 1) {
           const result = getCharacterMatch(nextAnswers);
-          await completeRemoteTest(
-            session,
-            result.character.id,
-            result.scores,
-          );
+          await completeRemoteTest(session, result.character.id, result.scores);
+
+          if (inviteRole === "invitee" && activeInviteCode) {
+            await completeInvitation(activeInviteCode, session.id);
+            const pair = await getInvitationResult(activeInviteCode);
+
+            if (pair.ready) {
+              setPairResult(pair);
+              setPhase("pair");
+              setSyncState("cloud");
+              return;
+            }
+          }
         }
 
         setSyncState("cloud");
@@ -172,6 +235,10 @@ export function LittleMatchApp() {
     setAnswers({});
     setIndex(0);
     setRemoteSession(null);
+    setActiveInviteCode(null);
+    setInviteRole(null);
+    setPairResult(null);
+    setInviteState(isSupabaseConfigured() ? "idle" : "unavailable");
     setPhase("game");
 
     if (isSupabaseConfigured()) {
@@ -189,8 +256,59 @@ export function LittleMatchApp() {
     }
   };
 
+  const handleCreateInvite = async () => {
+    if (!remoteSession || !isSupabaseConfigured()) {
+      setInviteState("unavailable");
+      return;
+    }
+
+    setInviteState("creating");
+
+    try {
+      const invite = await createInvitation(remoteSession.id);
+      setActiveInviteCode(invite.code);
+      setInviteRole("creator");
+      setInviteState("ready");
+    } catch (error) {
+      console.error(error);
+      setInviteState("error");
+    }
+  };
+
+  const handleCheckPair = async () => {
+    if (!activeInviteCode) return;
+
+    setInviteState("creating");
+
+    try {
+      const result = await getInvitationResult(activeInviteCode);
+
+      if (!result.ready) {
+        setInviteState("waiting");
+        return;
+      }
+
+      setPairResult(result);
+      setPhase("pair");
+      setInviteState("ready");
+    } catch (error) {
+      console.error(error);
+      setInviteState("error");
+    }
+  };
+
   if (!hydrated) {
     return <div className="session-loader" aria-label="LittleMatch loading">✦</div>;
+  }
+
+  if (phase === "pair" && pairResult) {
+    return (
+      <PairResultView
+        locale={locale}
+        data={pairResult}
+        onHome={() => setPhase("landing")}
+      />
+    );
   }
 
   if (phase === "game") {
@@ -209,10 +327,17 @@ export function LittleMatchApp() {
   }
 
   if (phase === "result") {
+    const inviteLink =
+      activeInviteCode && inviteRole === "creator"
+        ? `${window.location.origin}/?invite=${encodeURIComponent(activeInviteCode)}`
+        : null;
+
     return (
       <ResultView
         locale={locale}
         answers={answers}
+        inviteState={inviteRole === "invitee" ? "unavailable" : inviteState}
+        inviteLink={inviteLink}
         onLocaleChange={setLocale}
         onRestart={handleRestart}
         onReview={() => {
@@ -220,6 +345,8 @@ export function LittleMatchApp() {
           setPhase("game");
         }}
         onHome={() => setPhase("landing")}
+        onCreateInvite={handleCreateInvite}
+        onCheckPair={handleCheckPair}
       />
     );
   }

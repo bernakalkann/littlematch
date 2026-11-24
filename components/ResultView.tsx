@@ -7,13 +7,25 @@ import type { Locale } from "@/lib/types";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { LanguageToggle } from "./LanguageToggle";
 
+export type InviteUiState =
+  | "unavailable"
+  | "idle"
+  | "creating"
+  | "ready"
+  | "waiting"
+  | "error";
+
 type ResultViewProps = {
   locale: Locale;
   answers: AnswerMap;
+  inviteState: InviteUiState;
+  inviteLink?: string | null;
   onLocaleChange: (locale: Locale) => void;
   onRestart: () => void;
   onReview: () => void;
   onHome: () => void;
+  onCreateInvite: () => void | Promise<void>;
+  onCheckPair: () => void | Promise<void>;
 };
 
 const text = {
@@ -23,11 +35,18 @@ const text = {
     values: "İlişkide önemsediğin şeyler",
     communication: "İletişim ritmin",
     map: "Senin ilişki haritan",
-    habitat: "Karakterinin küçük dünyası",
     share: "Sonucumu paylaş",
     copied: "Bağlantı kopyalandı",
     review: "Cevaplarıma dön",
     restart: "Baştan oyna",
+    together: "Birlikte Oyna",
+    creating: "Davet hazırlanıyor…",
+    inviteReady: "Özel davet linkin hazır.",
+    copyInvite: "Linki kopyala",
+    waiting: "Diğer kişinin testi henüz tamamlanmadı.",
+    check: "Uyum sonucunu kontrol et",
+    unavailable: "Davet özelliği Supabase bağlantısı açıldığında kullanılabilir.",
+    inviteError: "Davet işlemi tamamlanamadı. Daha sonra tekrar deneyebilirsin.",
     disclaimer:
       "Bu sonuç eğlence amaçlı, cevaplarından üretilen açıklanabilir bir karakter eşleştirmesidir; psikolojik değerlendirme veya ilişki başarısı tahmini değildir.",
   },
@@ -37,11 +56,18 @@ const text = {
     values: "What you value in a relationship",
     communication: "Your communication rhythm",
     map: "Your relationship map",
-    habitat: "Your character's little world",
     share: "Share my result",
     copied: "Link copied",
     review: "Review my answers",
     restart: "Play again",
+    together: "Play Together",
+    creating: "Preparing your invite…",
+    inviteReady: "Your private invite link is ready.",
+    copyInvite: "Copy link",
+    waiting: "The other person has not finished the test yet.",
+    check: "Check match result",
+    unavailable: "Invites become available when Supabase is connected.",
+    inviteError: "The invite could not be completed. You can try again later.",
     disclaimer:
       "This is an entertainment result generated from an explainable match with your answers. It is not a psychological assessment or a prediction of relationship success.",
   },
@@ -50,12 +76,17 @@ const text = {
 export function ResultView({
   locale,
   answers,
+  inviteState,
+  inviteLink,
   onLocaleChange,
   onRestart,
   onReview,
   onHome,
+  onCreateInvite,
+  onCheckPair,
 }: ResultViewProps) {
   const [shared, setShared] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
   const result = getCharacterMatch(answers);
   const character = result.character;
   const t = text[locale];
@@ -84,6 +115,18 @@ export function ResultView({
       }
     } catch {
       // Closing the share sheet or blocking clipboard is harmless.
+    }
+  };
+
+  const copyInvite = async () => {
+    if (!inviteLink) return;
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteCopied(true);
+      window.setTimeout(() => setInviteCopied(false), 1800);
+    } catch {
+      // Clipboard access may be blocked by the browser.
     }
   };
 
@@ -122,6 +165,29 @@ export function ResultView({
             <button type="button" className="secondary-result-action" onClick={onReview}>
               {t.review}
             </button>
+          </div>
+
+          <div className={"invite-note invite-" + inviteState}>
+            {inviteState === "unavailable" && <p>{t.unavailable}</p>}
+            {inviteState === "idle" && (
+              <button type="button" onClick={onCreateInvite}>{t.together} ✦</button>
+            )}
+            {inviteState === "creating" && <p>{t.creating}</p>}
+            {(inviteState === "ready" || inviteState === "waiting") && inviteLink && (
+              <>
+                <p>{inviteState === "waiting" ? t.waiting : t.inviteReady}</p>
+                <div className="invite-link-row">
+                  <input value={inviteLink} readOnly aria-label={t.inviteReady} />
+                  <button type="button" onClick={copyInvite}>
+                    {inviteCopied ? t.copied : t.copyInvite}
+                  </button>
+                </div>
+                <button type="button" className="check-match-button" onClick={onCheckPair}>
+                  {t.check} →
+                </button>
+              </>
+            )}
+            {inviteState === "error" && <p>{t.inviteError}</p>}
           </div>
         </div>
       </section>
