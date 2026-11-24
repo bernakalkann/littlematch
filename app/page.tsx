@@ -1,5 +1,5 @@
-import { LandingView } from "@/components/LandingView";
+import { LittleMatchApp } from "@/components/LittleMatchApp";
 
 export default function Home() {
-  return <LandingView />;
+  return <LittleMatchApp />;
 }
