@@ -17,7 +17,7 @@ LittleMatch; klasik bir dating uygulaması veya sıradan bir kişilik testi değ
 - [x] Sonuç ekranında karakter profili ve ilişki haritası
 - [x] Reduced-motion desteği ve mobil breakpoint'ler
 - [ ] Manuel mobil/masaüstü görsel QA
-- [ ] CI kalite kontrolünün ilk başarılı koşusu
+- [x] CI kalite kontrolünün ilk başarılı koşusu
 
 ### Sonraki aşamalar
 - [ ] Supabase entegrasyonu ve anonim oturumlar
