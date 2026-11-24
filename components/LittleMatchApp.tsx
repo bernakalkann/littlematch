@@ -27,34 +27,43 @@ export function LittleMatchApp() {
   const [answers, setAnswers] = useState<AnswerMap>({});
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) {
-        const saved = JSON.parse(raw) as SavedSession;
-        if (saved.locale === "tr" || saved.locale === "en") {
-          setLocale(saved.locale);
+    const hydrationTimer = window.setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(storageKey);
+
+        if (raw) {
+          const saved = JSON.parse(raw) as SavedSession;
+
+          if (saved.locale === "tr" || saved.locale === "en") {
+            setLocale(saved.locale);
+          }
+
+          if (saved.phase === "game" || saved.phase === "result") {
+            setPhase(saved.phase);
+          }
+
+          if (
+            typeof saved.index === "number" &&
+            saved.index >= 0 &&
+            saved.index < questions.length
+          ) {
+            setIndex(saved.index);
+          }
+
+          if (saved.answers && typeof saved.answers === "object") {
+            setAnswers(saved.answers);
+          }
+        } else if (navigator.language.toLowerCase().startsWith("en")) {
+          setLocale("en");
         }
-        if (saved.phase === "game" || saved.phase === "result") {
-          setPhase(saved.phase);
-        }
-        if (
-          typeof saved.index === "number" &&
-          saved.index >= 0 &&
-          saved.index < questions.length
-        ) {
-          setIndex(saved.index);
-        }
-        if (saved.answers && typeof saved.answers === "object") {
-          setAnswers(saved.answers);
-        }
-      } else if (navigator.language.toLowerCase().startsWith("en")) {
-        setLocale("en");
+      } catch {
+        // A broken local session should never block the game.
+      } finally {
+        setHydrated(true);
       }
-    } catch {
-      // A broken local session should never block the game.
-    } finally {
-      setHydrated(true);
-    }
+    }, 0);
+
+    return () => window.clearTimeout(hydrationTimer);
   }, []);
 
   useEffect(() => {
