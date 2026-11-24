@@ -1,0 +1,59 @@
+:root {
+  --cream: #fff1d5;
+  --ink: #513828;
+  --sunset: #f5b66d;
+  --sky: #b8c3df;
+  --grass: #758055;
+  --paper: #f9dfb8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.boot-screen {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at 75% 30%, rgba(255, 214, 157, 0.72), transparent 28rem),
+    linear-gradient(180deg, var(--sky), var(--cream));
+}
+
+.boot-note {
+  text-align: center;
+  max-width: 34rem;
+}
+
+.boot-note h1 {
+  margin: 0.35rem 0;
+  font-size: clamp(3rem, 10vw, 7rem);
+  letter-spacing: -0.06em;
+}
+
+.boot-note p {
+  margin: 0;
+  font-size: clamp(1rem, 3vw, 1.35rem);
+}
+
+.boot-mark {
+  font-size: 1.5rem;
+}
