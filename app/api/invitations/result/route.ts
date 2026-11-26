@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const { data: invitation } = await admin
       .from("invitations")
       .select(
-        "id,creator_id,invitee_id,creator_session_id,invitee_session_id,status",
+        "id,creator_id,invitee_id,creator_session_id,invitee_session_id,status,expires_at",
       )
       .eq("code_hash", codeHash)
       .maybeSingle();
@@ -35,6 +35,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (invitation.status !== "completed" || !invitation.invitee_session_id) {
+      if (new Date(invitation.expires_at).getTime() <= Date.now()) {
+        return NextResponse.json({ error: "INVITATION_EXPIRED" }, { status: 410 });
+      }
       return NextResponse.json(
         { status: invitation.status, ready: false },
         { status: 202 },

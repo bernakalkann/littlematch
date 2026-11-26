@@ -20,6 +20,7 @@ type ResultViewProps = {
   answers: AnswerMap;
   inviteState: InviteUiState;
   inviteLink?: string | null;
+  invited: boolean;
   onLocaleChange: (locale: Locale) => void;
   onRestart: () => void;
   onReview: () => void;
@@ -42,6 +43,8 @@ const text = {
     together: "Birlikte Oyna",
     creating: "Davet hazırlanıyor…",
     inviteReady: "Özel davet linkin hazır.",
+    invited: "Arkadaşınla uyum haritanı birlikte aç.",
+    showPair: "Uyum haritasını aç",
     copyInvite: "Linki kopyala",
     waiting: "Diğer kişinin testi henüz tamamlanmadı.",
     check: "Uyum sonucunu kontrol et",
@@ -63,6 +66,8 @@ const text = {
     together: "Play Together",
     creating: "Preparing your invite…",
     inviteReady: "Your private invite link is ready.",
+    invited: "See the relationship map for you and your friend.",
+    showPair: "Open your match map",
     copyInvite: "Copy link",
     waiting: "The other person has not finished the test yet.",
     check: "Check match result",
@@ -78,6 +83,7 @@ export function ResultView({
   answers,
   inviteState,
   inviteLink,
+  invited,
   onLocaleChange,
   onRestart,
   onReview,
@@ -104,11 +110,11 @@ export function ResultView({
         await navigator.share({
           title: "LittleMatch",
           text: shareText,
-          url: window.location.href,
+          url: window.location.origin,
         });
       } else {
         await navigator.clipboard.writeText(
-          shareText + "\n" + window.location.href,
+          shareText + "\n" + window.location.origin,
         );
         setShared(true);
         window.setTimeout(() => setShared(false), 1800);
@@ -162,18 +168,18 @@ export function ResultView({
             <button type="button" className="primary-result-action" onClick={share}>
               {shared ? t.copied : t.share}
             </button>
-            <button type="button" className="secondary-result-action" onClick={onReview}>
+            <button type="button" className="secondary-result-action" onClick={onReview} disabled={inviteState === "creating"}>
               {t.review}
             </button>
           </div>
 
-          <div className={"invite-note invite-" + inviteState}>
+          <div className={"invite-note invite-" + inviteState} aria-live="polite">
             {inviteState === "unavailable" && <p>{t.unavailable}</p>}
-            {inviteState === "idle" && (
+            {!invited && !inviteLink && (inviteState === "idle" || inviteState === "error") && (
               <button type="button" onClick={onCreateInvite}>{t.together} ✦</button>
             )}
             {inviteState === "creating" && <p>{t.creating}</p>}
-            {(inviteState === "ready" || inviteState === "waiting") && inviteLink && (
+            {inviteState !== "creating" && inviteLink && (
               <>
                 <p>{inviteState === "waiting" ? t.waiting : t.inviteReady}</p>
                 <div className="invite-link-row">
@@ -185,6 +191,12 @@ export function ResultView({
                 <button type="button" className="check-match-button" onClick={onCheckPair}>
                   {t.check} →
                 </button>
+              </>
+            )}
+            {invited && inviteState !== "creating" && (
+              <>
+                <p>{inviteState === "waiting" ? t.waiting : t.invited}</p>
+                <button type="button" onClick={onCheckPair}>{t.showPair} →</button>
               </>
             )}
             {inviteState === "error" && <p>{t.inviteError}</p>}
@@ -232,7 +244,7 @@ export function ResultView({
 
       <footer className="result-footer">
         <p>{t.disclaimer}</p>
-        <button type="button" onClick={onRestart}>{t.restart} ↻</button>
+        <button type="button" onClick={onRestart} disabled={inviteState === "creating"}>{t.restart} ↻</button>
       </footer>
     </main>
   );

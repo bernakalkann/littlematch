@@ -29,8 +29,6 @@ export function LandingView({
 
         <nav className="top-actions" aria-label="Main navigation">
           <LanguageToggle locale={locale} onChange={onLocaleChange} compact />
-          <button className="soft-link" type="button">{t.about}</button>
-          <button className="soft-link" type="button">{t.login}</button>
         </nav>
       </header>
 
@@ -60,10 +58,6 @@ export function LandingView({
         <article className="paper-note note-two">
           <span className="note-icon">☁</span>
           <strong>{t.featureMatch}</strong>
-        </article>
-        <article className="paper-note note-three">
-          <span className="note-icon">◌</span>
-          <strong>{t.featureChat}</strong>
         </article>
       </section>
 

@@ -137,6 +137,21 @@ grant select, insert, update, delete on table public.test_answers to authenticat
 grant select, insert, update, delete on table public.character_results to authenticated;
 grant select on table public.invitations to authenticated;
 grant select on table public.comparison_results to authenticated;
+grant usage on sequence public.test_answers_id_seq to authenticated;
+
+grant select on table public.test_sessions, public.test_answers, public.character_results
+  to service_role;
+grant select, insert, update on table public.invitations, public.comparison_results
+  to service_role;
+
+-- Supabase's optional event trigger needs no Data API access.
+do $$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+  end if;
+end;
+$$;
 
 create policy "profiles_select_own"
 on public.profiles for select

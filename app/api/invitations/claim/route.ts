@@ -30,15 +30,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "INVITATION_NOT_FOUND" }, { status: 404 });
     }
 
-    if (new Date(invitation.expires_at as string).getTime() <= Date.now()) {
-      await admin
-        .from("invitations")
-        .update({ status: "expired" })
-        .eq("id", invitation.id);
-
-      return NextResponse.json({ error: "INVITATION_EXPIRED" }, { status: 410 });
-    }
-
     if (invitation.creator_id === user.id) {
       return NextResponse.json({ error: "CANNOT_CLAIM_OWN_INVITE" }, { status: 409 });
     }
@@ -47,7 +38,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "INVITATION_ALREADY_CLAIMED" }, { status: 409 });
     }
 
-    if (!["open", "claimed"].includes(invitation.status as string)) {
+    if (invitation.invitee_id === user.id && invitation.status === "completed") {
+      return NextResponse.json({ invitationId: invitation.id });
+    }
+
+    const now = new Date().toISOString();
+    if (new Date(invitation.expires_at).getTime() <= Date.now()) {
+      return NextResponse.json({ error: "INVITATION_EXPIRED" }, { status: 410 });
+    }
+
+    if (invitation.invitee_id === user.id && invitation.status === "claimed") {
+      return NextResponse.json({ invitationId: invitation.id });
+    }
+
+    if (invitation.status !== "open") {
       return NextResponse.json({ error: "INVITATION_NOT_OPEN" }, { status: 409 });
     }
 
@@ -56,10 +60,12 @@ export async function POST(request: NextRequest) {
       .update({
         invitee_id: user.id,
         status: "claimed",
-        claimed_at: new Date().toISOString(),
+        claimed_at: now,
       })
       .eq("id", invitation.id)
-      .or(`invitee_id.is.null,invitee_id.eq.${user.id}`)
+      .eq("status", "open")
+      .is("invitee_id", null)
+      .gt("expires_at", now)
       .select("id")
       .maybeSingle();
 

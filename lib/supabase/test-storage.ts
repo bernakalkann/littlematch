@@ -1,4 +1,5 @@
 import type { CharacterId, DimensionScores, Locale } from "@/lib/types";
+import type { AnswerMap } from "@/lib/scoring";
 import { ensureAnonymousUser } from "./auth";
 import { getSupabaseBrowserClient } from "./client";
 
@@ -50,41 +51,30 @@ export async function createRemoteTestSession(
   return { id: data.id as string, userId: user.id };
 }
 
-export async function saveRemoteAnswer(
-  session: RemoteTestSession | null,
-  questionId: string,
-  optionId: string,
+export async function completeRemoteTest(
+  session: RemoteTestSession,
+  answers: AnswerMap,
+  characterId: CharacterId,
+  scores: DimensionScores,
 ): Promise<void> {
-  if (!session) return;
-
   const supabase = getSupabaseBrowserClient();
-  if (!supabase) return;
+  if (!supabase) throw new Error("Supabase is not configured.");
 
-  const { error } = await supabase.from("test_answers").upsert(
-    {
+  const updatedAt = new Date().toISOString();
+  const { error: answerError } = await supabase.from("test_answers").upsert(
+    Object.entries(answers).map(([questionId, optionId]) => ({
       session_id: session.id,
       user_id: session.userId,
       question_id: questionId,
       option_id: optionId,
-      updated_at: new Date().toISOString(),
-    },
+      updated_at: updatedAt,
+    })),
     { onConflict: "session_id,question_id" },
   );
 
-  if (error) {
-    throw new Error("Remote answer could not be saved.", { cause: error });
+  if (answerError) {
+    throw new Error("Remote answers could not be saved.", { cause: answerError });
   }
-}
-
-export async function completeRemoteTest(
-  session: RemoteTestSession | null,
-  characterId: CharacterId,
-  scores: DimensionScores,
-): Promise<void> {
-  if (!session) return;
-
-  const supabase = getSupabaseBrowserClient();
-  if (!supabase) return;
 
   const { error: resultError } = await supabase
     .from("character_results")
@@ -110,10 +100,12 @@ export async function completeRemoteTest(
       status: "completed",
       character_id: characterId,
       scores,
-      completed_at: new Date().toISOString(),
+      completed_at: updatedAt,
     })
     .eq("id", session.id)
-    .eq("user_id", session.userId);
+    .eq("user_id", session.userId)
+    .select("id")
+    .single();
 
   if (sessionError) {
     throw new Error("Remote test session could not be completed.", {

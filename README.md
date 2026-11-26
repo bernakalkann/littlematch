@@ -20,7 +20,7 @@ LittleMatch; klasik bir dating uygulaması veya sıradan bir kişilik testi değ
 - [ ] Manuel mobil / masaüstü görsel QA
 
 ### Aşama 2 — Supabase ve iki kişilik uyum
-Kod tarafı hazır; LittleMatch'e özel Supabase projesine uygulanmayı bekliyor.
+Veritabanı şeması LittleMatch'e özel Supabase projesinde kurulu. Davet akışını kullanmak için anonim giriş ve çalışma ortamı değişkenlerinin yapılandırılması gerekiyor.
 
 - [x] Supabase browser istemcisi ve environment değişkeni yapısı
 - [x] Anonim kullanıcı oturumu kodu
@@ -31,10 +31,10 @@ Kod tarafı hazır; LittleMatch'e özel Supabase projesine uygulanmayı bekliyor
 - [x] İki kişilik deterministik karşılaştırma algoritması
 - [x] İki kişilik uyum sonucu ekranı
 - [x] Davet linki ile uçtan uca birlikte oynama istemci akışı
-- [ ] SQL şemasını LittleMatch Supabase projesine uygulama
+- [x] SQL şemasını LittleMatch Supabase projesine uygulama
 - [ ] Supabase Anonymous Sign-Ins özelliğini etkinleştirme
 - [ ] Publishable / secret key'leri çalışma ortamına bağlama
-- [ ] RLS ve güvenlik advisor kontrolü
+- [x] RLS ve güvenlik advisor kontrolü
 - [ ] Gerçek iki tarayıcı / iki anonim kullanıcı ile E2E test
 
 ### Sonraki aşamalar

@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { comparePair } from "@/lib/comparison";
+import { questions } from "@/data/questions";
 import { hashInvitationCode } from "@/lib/invitations/crypto";
 import {
   authenticateRequest,
   getSupabaseAdminClient,
 } from "@/lib/supabase/server";
-import type { DimensionScores } from "@/lib/types";
+import { calculateDimensionScores } from "@/lib/scoring";
 
 export const dynamic = "force-dynamic";
 
 function answersToMap(
   rows: Array<{ question_id: string; option_id: string }>,
 ): Record<string, string> {
+  const saved = Object.fromEntries(rows.map((row) => [row.question_id, row.option_id]));
   return Object.fromEntries(
-    rows.map((row) => [row.question_id, row.option_id]),
+    questions.flatMap(({ id, options }) =>
+      options.some((option) => option.id === saved[id]) ? [[id, saved[id]]] : [],
+    ),
   );
 }
 
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [{ data: creatorAnswers }, { data: inviteeAnswers }] = await Promise.all([
+    const [creatorAnswers, inviteeAnswers] = await Promise.all([
       admin
         .from("test_answers")
         .select("question_id,option_id")
@@ -82,11 +86,21 @@ export async function POST(request: NextRequest) {
         .eq("session_id", inviteeSession.id),
     ]);
 
+    if (creatorAnswers.error || inviteeAnswers.error) {
+      return NextResponse.json({ error: "ANSWERS_UNAVAILABLE" }, { status: 500 });
+    }
+
+    const answersA = answersToMap(creatorAnswers.data);
+    const answersB = answersToMap(inviteeAnswers.data);
+    if (Object.keys(answersA).length !== questions.length || Object.keys(answersB).length !== questions.length) {
+      return NextResponse.json({ error: "BOTH_TESTS_MUST_BE_COMPLETED" }, { status: 409 });
+    }
+
     const comparison = comparePair(
-      creatorSession.scores as DimensionScores,
-      inviteeSession.scores as DimensionScores,
-      answersToMap((creatorAnswers ?? []) as Array<{ question_id: string; option_id: string }>),
-      answersToMap((inviteeAnswers ?? []) as Array<{ question_id: string; option_id: string }>),
+      calculateDimensionScores(answersA),
+      calculateDimensionScores(answersB),
+      answersA,
+      answersB,
     );
 
     const { error: resultError } = await admin

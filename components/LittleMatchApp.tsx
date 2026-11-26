@@ -9,12 +9,12 @@ import {
   getInvitationResult,
   type PairResultData,
 } from "@/lib/invitations/client";
-import { getCharacterMatch, type AnswerMap } from "@/lib/scoring";
+import { getCharacterMatch, isTestComplete, type AnswerMap } from "@/lib/scoring";
+import { ensureAnonymousUser } from "@/lib/supabase/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   completeRemoteTest,
   createRemoteTestSession,
-  saveRemoteAnswer,
   type RemoteTestSession,
 } from "@/lib/supabase/test-storage";
 import type { Locale } from "@/lib/types";
@@ -46,9 +46,7 @@ export function LittleMatchApp() {
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [remoteSession, setRemoteSession] = useState<RemoteTestSession | null>(null);
-  const [syncState, setSyncState] = useState<SyncState>(
-    isSupabaseConfigured() ? "cloud" : "local",
-  );
+  const [syncState, setSyncState] = useState<SyncState>("local");
   const [activeInviteCode, setActiveInviteCode] = useState<string | null>(null);
   const [inviteRole, setInviteRole] = useState<InviteRole>(null);
   const [inviteState, setInviteState] = useState<InviteUiState>(
@@ -58,18 +56,17 @@ export function LittleMatchApp() {
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
+      const urlInviteCode = new URLSearchParams(window.location.search).get("invite");
       try {
         const raw = window.localStorage.getItem(storageKey);
-        const urlInviteCode = new URLSearchParams(window.location.search).get("invite");
+        const saved = raw ? (JSON.parse(raw) as SavedSession) : null;
 
-        if (raw) {
-          const saved = JSON.parse(raw) as SavedSession;
-
+        if (saved) {
           if (saved.locale === "tr" || saved.locale === "en") {
             setLocale(saved.locale);
           }
 
-          if (saved.phase === "game" || saved.phase === "result") {
+          if (saved.phase === "game" || (saved.phase === "result" && isTestComplete(saved.answers ?? {}))) {
             setPhase(saved.phase);
           }
 
@@ -91,19 +88,18 @@ export function LittleMatchApp() {
             isSupabaseConfigured()
           ) {
             setRemoteSession(saved.remoteSession);
-            setSyncState("cloud");
           }
 
-          if (saved.activeInviteCode && saved.inviteRole === "creator") {
+          if (saved.activeInviteCode && saved.inviteRole && isSupabaseConfigured()) {
             setActiveInviteCode(saved.activeInviteCode);
-            setInviteRole("creator");
+            setInviteRole(saved.inviteRole);
             setInviteState("ready");
           }
         } else if (navigator.language.toLowerCase().startsWith("en")) {
           setLocale("en");
         }
 
-        if (urlInviteCode) {
+        if (urlInviteCode && saved?.activeInviteCode !== urlInviteCode) {
           setActiveInviteCode(urlInviteCode);
           setInviteRole("invitee");
           setInviteState(isSupabaseConfigured() ? "idle" : "unavailable");
@@ -135,7 +131,11 @@ export function LittleMatchApp() {
       activeInviteCode,
       inviteRole,
     };
-    window.localStorage.setItem(storageKey, JSON.stringify(session));
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(session));
+    } catch {
+      // The current game can continue when browser storage is unavailable.
+    }
   }, [
     activeInviteCode,
     answers,
@@ -147,75 +147,37 @@ export function LittleMatchApp() {
     remoteSession,
   ]);
 
-  const prepareRemoteSession = async () => {
-    if (!isSupabaseConfigured()) {
-      setSyncState("local");
-      return null;
-    }
+  const saveCompletedTest = async (completedAnswers: AnswerMap) => {
+    const session = remoteSession ?? await createRemoteTestSession(locale);
+    if (!session) throw new Error("Remote test session unavailable.");
 
-    if (remoteSession) {
-      setSyncState("cloud");
-      return remoteSession;
-    }
-
-    setSyncState("saving");
-
-    try {
-      const session = await createRemoteTestSession(locale);
-      setRemoteSession(session);
-      setSyncState(session ? "cloud" : "local");
-      return session;
-    } catch (error) {
-      console.error(error);
-      setSyncState("error");
-      return null;
-    }
-  };
-
-  const handleStart = async () => {
-    setPhase("game");
-    const session = await prepareRemoteSession();
-
-    if (inviteRole === "invitee" && activeInviteCode && session) {
-      try {
-        await claimInvitation(activeInviteCode);
-        setInviteState("ready");
-      } catch (error) {
-        console.error(error);
-        setInviteState("error");
-      }
-    }
+    setRemoteSession(session);
+    const result = getCharacterMatch(completedAnswers);
+    await completeRemoteTest(session, completedAnswers, result.character.id, result.scores);
+    return session;
   };
 
   const handleAnswer = async (optionId: string) => {
+    if (syncState === "saving") return;
     const question = questions[index];
     const nextAnswers = { ...answers, [question.id]: optionId };
     setAnswers(nextAnswers);
 
-    const session = remoteSession ?? (await prepareRemoteSession());
+    if (index < questions.length - 1) {
+      setIndex(index + 1);
+      return;
+    }
 
-    if (session) {
+    const pendingQuestion = questions.findIndex(({ id }) => !nextAnswers[id]);
+    if (pendingQuestion !== -1) {
+      setIndex(pendingQuestion);
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
       setSyncState("saving");
       try {
-        await saveRemoteAnswer(session, question.id, optionId);
-
-        if (index === questions.length - 1) {
-          const result = getCharacterMatch(nextAnswers);
-          await completeRemoteTest(session, result.character.id, result.scores);
-
-          if (inviteRole === "invitee" && activeInviteCode) {
-            await completeInvitation(activeInviteCode, session.id);
-            const pair = await getInvitationResult(activeInviteCode);
-
-            if (pair.ready) {
-              setPairResult(pair);
-              setPhase("pair");
-              setSyncState("cloud");
-              return;
-            }
-          }
-        }
-
+        await saveCompletedTest(nextAnswers);
         setSyncState("cloud");
       } catch (error) {
         console.error(error);
@@ -223,49 +185,34 @@ export function LittleMatchApp() {
       }
     }
 
-    if (index === questions.length - 1) {
-      setPhase("result");
-      return;
-    }
-
-    setIndex((current) => current + 1);
+    setPhase("result");
   };
 
-  const handleRestart = async () => {
-    setAnswers({});
-    setIndex(0);
-    setRemoteSession(null);
+  const clearInvite = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("invite");
+    window.history.replaceState(window.history.state, "", url);
     setActiveInviteCode(null);
     setInviteRole(null);
     setPairResult(null);
     setInviteState(isSupabaseConfigured() ? "idle" : "unavailable");
-    setPhase("game");
+  };
 
-    if (isSupabaseConfigured()) {
-      setSyncState("saving");
-      try {
-        const session = await createRemoteTestSession(locale);
-        setRemoteSession(session);
-        setSyncState(session ? "cloud" : "local");
-      } catch (error) {
-        console.error(error);
-        setSyncState("error");
-      }
-    } else {
-      setSyncState("local");
-    }
+  const handleRestart = () => {
+    setAnswers({});
+    setIndex(0);
+    setRemoteSession(null);
+    clearInvite();
+    setPhase("game");
+    setSyncState("local");
   };
 
   const handleCreateInvite = async () => {
-    if (!remoteSession || !isSupabaseConfigured()) {
-      setInviteState("unavailable");
-      return;
-    }
-
     setInviteState("creating");
 
     try {
-      const invite = await createInvitation(remoteSession.id);
+      const session = await saveCompletedTest(answers);
+      const invite = await createInvitation(session.id);
       setActiveInviteCode(invite.code);
       setInviteRole("creator");
       setInviteState("ready");
@@ -281,7 +228,19 @@ export function LittleMatchApp() {
     setInviteState("creating");
 
     try {
-      const result = await getInvitationResult(activeInviteCode);
+      let result;
+      if (inviteRole === "invitee") {
+        await ensureAnonymousUser();
+        await claimInvitation(activeInviteCode);
+        result = await getInvitationResult(activeInviteCode);
+        if (!result.ready) {
+          const session = await saveCompletedTest(answers);
+          await completeInvitation(activeInviteCode, session.id);
+          result = await getInvitationResult(activeInviteCode);
+        }
+      } else {
+        result = await getInvitationResult(activeInviteCode);
+      }
 
       if (!result.ready) {
         setInviteState("waiting");
@@ -320,7 +279,9 @@ export function LittleMatchApp() {
         syncState={syncState}
         onAnswer={handleAnswer}
         onBack={() => setIndex((current) => Math.max(0, current - 1))}
-        onHome={() => setPhase("landing")}
+        onHome={() => {
+          if (syncState !== "saving") setPhase("landing");
+        }}
         onLocaleChange={setLocale}
       />
     );
@@ -336,11 +297,15 @@ export function LittleMatchApp() {
       <ResultView
         locale={locale}
         answers={answers}
-        inviteState={inviteRole === "invitee" ? "unavailable" : inviteState}
+        inviteState={inviteState}
+        invited={inviteRole === "invitee" && isSupabaseConfigured()}
         inviteLink={inviteLink}
         onLocaleChange={setLocale}
         onRestart={handleRestart}
         onReview={() => {
+          if (activeInviteCode && inviteRole === "creator") clearInvite();
+          setRemoteSession(null);
+          setSyncState("local");
           setIndex(questions.length - 1);
           setPhase("game");
         }}
@@ -355,7 +320,7 @@ export function LittleMatchApp() {
     <LandingView
       locale={locale}
       onLocaleChange={setLocale}
-      onStart={handleStart}
+      onStart={() => setPhase(isTestComplete(answers) ? "result" : "game")}
     />
   );
 }
