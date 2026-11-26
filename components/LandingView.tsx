@@ -1,93 +1,49 @@
 "use client";
 
 import { copy } from "@/data/copy";
-import type { PlayerCard } from "@/lib/supabase/player-cards";
 import type { Locale } from "@/lib/types";
-import { CozyScene } from "./CozyScene";
-import { LanguageToggle } from "./LanguageToggle";
 import { AvatarPortrait } from "./AvatarPortrait";
+import { SceneHeader, type SceneAccount } from "./SceneHeader";
 
-type LandingViewProps = {
+export function LandingView({ locale, onLocaleChange, onStart, onStartPair, onDiscover, onCustomize, account }: {
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
   onStart: () => void;
   onStartPair: () => void;
   onDiscover: () => void;
   onCustomize: () => void;
-  profile: PlayerCard;
-  onSignOut: () => void | Promise<void>;
-  accountNotice?: string;
-};
-
-export function LandingView({
-  locale,
-  onLocaleChange,
-  onStart,
-  onStartPair,
-  onDiscover,
-  onCustomize,
-  profile,
-  onSignOut,
-  accountNotice,
-}: LandingViewProps) {
+  account: SceneAccount;
+}) {
   const t = copy[locale];
+  const { profile } = account;
 
-  return (
-    <main className="landing-shell">
-      <CozyScene />
-
-      <header className="topbar">
-        <a className="wordmark" href="#" aria-label="LittleMatch">
-          littlematch<span>✦</span>
-        </a>
-
-        <nav className="top-actions" aria-label="Main navigation">
-          <LanguageToggle locale={locale} onChange={onLocaleChange} compact />
-          <button className="account-chip avatar-edit-button" type="button" onClick={onCustomize}
-            aria-label={locale === "tr" ? "Avatarımı kişiselleştir" : "Customize my avatar"}
-            title={locale === "tr" ? "Avatarımı kişiselleştir" : "Customize my avatar"}>
-            <AvatarPortrait id={profile.avatar_id} look={profile.avatar_look} /><strong>{profile.nickname}</strong>
-            <span aria-hidden="true">✎</span>
-          </button>
-          <button type="button" className="soft-link" onClick={onSignOut}>{locale === "tr" ? "Çıkış yap" : "Log out"}</button>
-        </nav>
-      </header>
-
-      <section className="hero-copy">
-        {accountNotice && <p role="status">{accountNotice}</p>}
-        <p className="eyebrow">{t.tagline}</p>
-        <h1>
-          {t.heroTitleA}
-          <br />
-          {t.heroTitleB}
-        </h1>
-        <p className="hero-description">
-          {t.heroDescriptionA}
-          <br />
-          {t.heroDescriptionB}
-        </p>
-        <button className="primary-cta" type="button" onClick={onStart}>
-          <span className="play-mark">▶</span>
-          {t.start}
+  return <main className="painted-shell painted-home">
+    <SceneHeader locale={locale} onLocaleChange={onLocaleChange} account={account} />
+    <section className="home-stage">
+      <div className="painted-art home-art" aria-hidden="true" />
+      <div className="home-message">
+        <h1>{t.heroTitleA}<br />{t.heroTitleB}</h1>
+        <p>{t.heroDescriptionA}</p>
+        <button className="scene-button scene-start" type="button" onClick={onStart}>
+          <span aria-hidden="true">▶</span> {t.start}
         </button>
-      </section>
-
-      <section className="feature-notes" aria-label="LittleMatch features">
-        <button className="paper-note note-one" type="button" onClick={onStart}>
-          <span className="note-icon" aria-hidden="true">▣</span>
-          <strong>{t.featureCharacter}</strong>
-        </button>
-        <button className="paper-note note-two" type="button" onClick={onStartPair}>
-          <span className="note-icon" aria-hidden="true">☁</span>
-          <strong>{t.featureMatch}</strong>
-        </button>
-        <button className="paper-note note-three" type="button" onClick={onDiscover}>
-          <span className="note-icon" aria-hidden="true">✦</span>
-          <strong>{locale === "tr" ? "Keşfet" : "Discover"}</strong>
-        </button>
-      </section>
-
-      <p className="prototype-note">{t.prototype}</p>
-    </main>
-  );
+      </div>
+    </section>
+    <nav className="home-shortcuts" aria-label={t.shortcuts}>
+      <button className="paper-action" type="button" onClick={onCustomize}>
+        <span className="shortcut-art shortcut-avatar" aria-hidden="true">
+          <span className="shortcut-portrait"><AvatarPortrait id={profile.avatar_id} look={profile.avatar_look} /></span>
+          <span className="shortcut-pencil">✎</span><span className="shortcut-star">✦</span>
+        </span>
+        <strong>{t.featureCharacter}</strong>
+      </button>
+      <button className="paper-action" type="button" onClick={onStartPair}>
+        <span className="shortcut-art shortcut-pair" aria-hidden="true">
+          <i className="shortcut-dog" /><span className="shortcut-heart">♥</span><i className="shortcut-cat" />
+        </span>
+        <strong>{t.featureMatch}</strong>
+      </button>
+    </nav>
+    <div className="home-discover"><button type="button" className="scene-button" onClick={onDiscover}>{t.discover}</button></div>
+  </main>;
 }

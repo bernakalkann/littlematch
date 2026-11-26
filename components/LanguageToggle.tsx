@@ -1,5 +1,6 @@
 "use client";
 
+import { copy } from "@/data/copy";
 import type { Locale } from "@/lib/types";
 
 type LanguageToggleProps = {
@@ -14,7 +15,7 @@ export function LanguageToggle({
   compact = false,
 }: LanguageToggleProps) {
   return (
-    <div className={compact ? "language-toggle compact" : "language-toggle"} aria-label="Language">
+    <div className={compact ? "language-toggle compact" : "language-toggle"} role="group" aria-label={copy[locale].languageLabel}>
       <button
         type="button"
         className={locale === "tr" ? "active" : ""}

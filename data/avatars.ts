@@ -10,6 +10,8 @@ export function isAvatarId(value: unknown): value is AvatarId {
   return avatarIds.some((id) => id === value);
 }
 
+export const nicknamePattern = /^[\p{L}\p{N}_]{3,20}$/u;
+
 export const lookPattern = /^[0-5][0-4][0-4][0-3][0-4][0-4]$/;
 export const defaultLook = "001020";
 

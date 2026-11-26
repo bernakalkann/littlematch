@@ -44,8 +44,8 @@ export async function publishPlayerCard(client: SupabaseClient, userId: string) 
   if (error) throw error;
 }
 
-export async function updatePlayerAvatar(client: SupabaseClient, userId: string, look: string | null) {
-  const { error } = await client.from("player_cards").update({ avatar_look: look }).eq("user_id", userId).select("user_id").single();
+export async function updatePlayerAppearance(client: SupabaseClient, userId: string, nickname: string, look: string | null) {
+  const { error } = await client.from("player_cards").update({ nickname, avatar_look: look }).eq("user_id", userId).select("user_id").single();
   if (error) throw error;
 }
 

@@ -2,25 +2,21 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
-import { avatarIds, defaultLook, isAvatarId, type AvatarGroup, type AvatarId } from "@/data/avatars";
+import { isAvatarId, nicknamePattern } from "@/data/avatars";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { loadPlayerCard, savePlayerCard, updatePlayerAvatar, type PlayerCard } from "@/lib/supabase/player-cards";
+import { loadPlayerCard, savePlayerCard, updatePlayerAppearance, type PlayerCard } from "@/lib/supabase/player-cards";
 import type { Locale } from "@/lib/types";
-import { AvatarPortrait } from "./AvatarPortrait";
-import { AvatarStudio } from "./AvatarStudio";
-import { CozyScene } from "./CozyScene";
-import { LanguageToggle } from "./LanguageToggle";
+import { AvatarEditView } from "./AvatarEditView";
+import { SceneHeader } from "./SceneHeader";
 import { LittleMatchApp } from "./LittleMatchApp";
 
 type Mode = "login" | "register" | "forgot" | "recover";
 const previewKey = "littlematch-preview-card-v1";
-const nicknamePattern = /^[\p{L}\p{N}_]{3,20}$/u;
 
 const words = {
   tr: {
     welcome: "LittleMatch’e hoş geldin",
-    intro: "Bir takma ad seç, kendi karakterinle oyuna katıl.",
-    login: "Giriş yap", register: "Kayıt ol", forgot: "Şifremi unuttum", recover: "Yeni şifre belirle",
+    login: "Oturum aç", register: "Kayıt ol", forgot: "Şifremi unuttum", recover: "Yeni şifre belirle",
     email: "E-posta", password: "Şifre", newPassword: "Yeni şifren", nickname: "Takma ad",
     nicknameHelp: "3–20 harf, rakam veya alt çizgi.",
     confirmation: "Kayıt bağlantısı geldiyse e-postanı açıp hesabını doğrula.",
@@ -28,18 +24,13 @@ const words = {
     resetAction: "Sıfırlama bağlantısı gönder",
     updated: "Şifren güncellendi. Yeni şifrenle giriş yap.",
     failed: "İşlem tamamlanamadı. Bilgilerini kontrol edip tekrar dene.",
-    busy: "Bir saniye…", signOut: "Çıkış yap",
-    chooseAvatar: "Görünümünü seç", gender: "Cinsiyet", girl: "Kız", boy: "Erkek",
-    avatar: "Görünüm", begin: "Kişilik testine başla",
-    taken: "Bu takma adı başka bir oyuncu seçmiş. Yeni bir ad dene.",
+    busy: "Bir saniye…",
     profileFailed: "Profil yüklenemedi. Tekrar dene.", retry: "Tekrar dene",
     preview: "Yerel önizleme. Burada takma ad ve görünüm seçerek oyunu deneyebilirsin.",
     unavailable: "E-posta ile giriş ve şifre sıfırlama, Supabase’e bağlı web sürümünde çalışır.",
-    visibility: "Testi bitirdiğinde takma adın ve görünümün diğer kayıtlı oyunculara görünür.",
   },
   en: {
     welcome: "Welcome to LittleMatch",
-    intro: "Pick a nickname and join the game as your own character.",
     login: "Log in", register: "Sign up", forgot: "Forgot password", recover: "Choose a new password",
     email: "Email", password: "Password", newPassword: "New password", nickname: "Nickname",
     nicknameHelp: "3–20 letters, numbers, or underscores.",
@@ -48,30 +39,27 @@ const words = {
     resetAction: "Send password reset link",
     updated: "Password updated. Log in with your new password.",
     failed: "Something went wrong. Check your details and try again.",
-    busy: "One moment…", signOut: "Log out",
-    chooseAvatar: "Choose your look", gender: "Gender", girl: "Girl", boy: "Boy",
-    avatar: "Look", begin: "Start the personality quiz",
-    taken: "Another player has this nickname. Try a different one.",
+    busy: "One moment…",
     profileFailed: "Your profile could not be loaded. Try again.", retry: "Try again",
     preview: "Local preview. Choose a nickname and a look to play on this device.",
     unavailable: "Email login and password resets work in the web version connected to Supabase.",
-    visibility: "After the quiz, other registered players can see your nickname and avatar.",
   },
 };
 
-function Scene({ locale, onLocaleChange, children }: {
+function Scene({ locale, onLocaleChange, onLogin, onLogout, children }: {
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
+  onLogin?: () => void;
+  onLogout?: () => void | Promise<void>;
   children: React.ReactNode;
 }) {
   return (
-    <main className="landing-shell account-shell">
-      <CozyScene />
-      <header className="topbar">
-        <span className="wordmark">littlematch<span>✦</span></span>
-        <LanguageToggle locale={locale} onChange={onLocaleChange} compact />
-      </header>
-      <section className="account-card">{children}</section>
+    <main className="painted-shell painted-account">
+      <SceneHeader locale={locale} onLocaleChange={onLocaleChange} onLogin={onLogin} onLogout={onLogout} />
+      <div className="painted-split auth-layout">
+        <div className="painted-art auth-art" aria-hidden="true" />
+        <section className="paper-panel auth-panel">{children}</section>
+      </div>
     </main>
   );
 }
@@ -79,7 +67,7 @@ function Scene({ locale, onLocaleChange, children }: {
 export function AccountGate() {
   const client = getSupabaseBrowserClient();
   const [locale, setLocale] = useState<Locale>("tr");
-  const [mode, setMode] = useState<Mode>("login");
+  const [mode, setMode] = useState<Mode>("register");
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [previewCard, setPreviewCard] = useState<PlayerCard | null>(null);
@@ -133,7 +121,7 @@ export function AccountGate() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice("");
-    if (mode === "register" && !nicknamePattern.test(nickname.trim())) {
+    if (!client && mode === "register" && !nicknamePattern.test(nickname.trim())) {
       setNotice(t.nicknameHelp);
       return;
     }
@@ -149,7 +137,7 @@ export function AccountGate() {
     try {
       if (mode === "register") {
         const { data, error } = await client.auth.signUp({
-          email: email.trim(), password, options: { data: { nickname: nickname.trim() }, emailRedirectTo: redirectTo.href },
+          email: email.trim(), password, options: { emailRedirectTo: redirectTo.href },
         });
         if (error) throw error;
         if (!data.session) {
@@ -190,8 +178,8 @@ export function AccountGate() {
 
   if (previewCard) {
     return <LittleMatchApp key={previewCard.user_id} profile={previewCard} startQuiz={previewStartsQuiz}
-      initialLocale={locale} onSaveLook={async (avatar_look) => {
-        const next = { ...previewCard, avatar_look };
+      initialLocale={locale} onSaveProfile={async (nickname, avatar_look) => {
+        const next = { ...previewCard, nickname, avatar_look };
         window.localStorage.setItem(previewKey, JSON.stringify(next));
         setPreviewCard(next);
       }} onSignOut={() => {
@@ -204,30 +192,31 @@ export function AccountGate() {
   }
 
   if (previewOnboarding) {
-    return <Scene locale={locale} onLocaleChange={setLocale}>
-      <AvatarPicker locale={locale} initialNickname={nickname} online={false} onSave={async (name, avatar_id, avatar_look) => {
+    return <AvatarEditView locale={locale} onLocaleChange={setLocale} initialNickname={nickname}
+      onLogin={() => { setPreviewOnboarding(false); open("login"); }}
+      onLeave={() => setPreviewOnboarding(false)}
+      onSave={async (name, avatar_id, avatar_look) => {
         const localId = window.crypto.randomUUID?.() ?? String(Date.now());
         const card: PlayerCard = { user_id: localId, nickname: name, avatar_id, avatar_look, listed: false };
         try { window.localStorage.setItem(previewKey, JSON.stringify(card)); } catch { /* Storage may be unavailable. */ }
         setPreviewStartsQuiz(true);
         setPreviewCard(card);
-      }} />
-    </Scene>;
+      }} />;
   }
 
   const showForm = Boolean(client) || mode === "register";
   return (
-    <Scene locale={locale} onLocaleChange={setLocale}>
+    <Scene locale={locale} onLocaleChange={setLocale} onLogin={mode !== "recover" ? () => { if (!busy && mode !== "login") open("login"); } : undefined}>
       <h1>{mode === "recover" ? t.recover : t.welcome}</h1>
       {mode !== "recover" && <>
-        <p>{client ? t.intro : t.preview}</p>
+        {!client && <p>{t.preview}</p>}
         <nav className="account-tabs" aria-label="LittleMatch">
-          <button type="button" aria-pressed={mode === "login"} onClick={() => open("login")} disabled={busy}>{t.login}</button>
           <button type="button" aria-pressed={mode === "register"} onClick={() => open("register")} disabled={busy}>{t.register}</button>
+          <button type="button" aria-pressed={mode === "login"} onClick={() => open("login")} disabled={busy}>{t.login}</button>
         </nav>
       </>}
       {showForm ? <form className="account-form" onSubmit={submit}>
-        {mode === "register" && <label>{t.nickname}
+        {!client && mode === "register" && <label>{t.nickname}
           <input required minLength={3} maxLength={20} value={nickname} onChange={(event) => setNickname(event.target.value)} autoComplete="nickname" />
         </label>}
         {client && mode !== "recover" && <label>{t.email}
@@ -238,11 +227,11 @@ export function AccountGate() {
             onChange={(event) => setPassword(event.target.value)}
             autoComplete={mode === "login" ? "current-password" : "new-password"} />
         </label>}
-        <button className="primary-result-action" type="submit" disabled={busy}>
+        <button className="scene-button scene-gold" type="submit" disabled={busy}>
           {busy ? t.busy : mode === "forgot" ? t.resetAction : t[mode]}
         </button>
       </form> : <p>{t.unavailable}</p>}
-      {mode !== "recover" && mode !== "forgot" &&
+      {client && mode === "login" &&
         <button type="button" className="account-link" onClick={() => open("forgot")} disabled={busy}>{t.forgot}</button>}
       {mode === "forgot" &&
         <button type="button" className="account-link" onClick={() => open("login")} disabled={busy}>{t.login}</button>}
@@ -280,96 +269,26 @@ function RegisteredPlayer({ user, initialNickname, locale, onLocaleChange }: {
     if (error) setSignOutFailed(true);
   }
 
-  if (card) return <LittleMatchApp profile={card} startQuiz={startQuiz} initialLocale={locale} onSaveLook={async (avatar_look) => {
-    await updatePlayerAvatar(client, user.id, avatar_look);
-    setCard({ ...card, avatar_look });
+  if (card) return <LittleMatchApp profile={card} startQuiz={startQuiz} initialLocale={locale} onSaveProfile={async (nickname, avatar_look) => {
+    await updatePlayerAppearance(client, user.id, nickname, avatar_look);
+    setCard({ ...card, nickname, avatar_look });
   }}
     onSignOut={signOut} accountNotice={signOutFailed ? t.failed : undefined} />;
 
-  return <Scene locale={locale} onLocaleChange={onLocaleChange}>
+  if (card === null && !loadFailed) return <AvatarEditView
+    locale={locale} onLocaleChange={onLocaleChange} initialNickname={initialNickname || String(user.user_metadata?.nickname ?? "")}
+    onLogout={signOut} online
+    onSave={async (nickname, avatar_id, avatar_look) => {
+      const saved = await savePlayerCard(client, { user_id: user.id, nickname, avatar_id, avatar_look });
+      setStartQuiz(true);
+      setCard(saved);
+    }} />;
+
+  return <Scene locale={locale} onLocaleChange={onLocaleChange} onLogout={signOut}>
     {loadFailed ? <>
       <h1>{t.profileFailed}</h1>
-      <button className="primary-result-action" onClick={() => { setLoadFailed(false); setAttempt(attempt + 1); }}>{t.retry}</button>
-    </> : card === undefined ? <p role="status">{t.busy}</p> :
-      <AvatarPicker locale={locale} initialNickname={initialNickname || String(user.user_metadata?.nickname ?? "")} online
-        onSave={async (nickname, avatar_id, avatar_look) => {
-          const saved = await savePlayerCard(client, { user_id: user.id, nickname, avatar_id, avatar_look });
-          setStartQuiz(true);
-          setCard(saved);
-        }} />}
-    <button className="account-link" onClick={signOut}>{t.signOut}</button>
+      <button className="scene-button scene-gold" type="button" onClick={() => { setLoadFailed(false); setAttempt(attempt + 1); }}>{t.retry}</button>
+    </> : <p role="status">{t.busy}</p>}
     {signOutFailed && <p role="status">{t.failed}</p>}
   </Scene>;
-}
-
-function AvatarPicker({ locale, initialNickname, online, onSave }: {
-  locale: Locale;
-  initialNickname: string;
-  online: boolean;
-  onSave: (name: string, id: AvatarId, look: string | null) => Promise<void>;
-}) {
-  const [nickname, setNickname] = useState(initialNickname);
-  const [group, setGroup] = useState<AvatarGroup>();
-  const [avatar, setAvatar] = useState<AvatarId>();
-  const [custom, setCustom] = useState(false);
-  const [look, setLook] = useState(defaultLook);
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
-  const t = words[locale];
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const base = avatar ?? (group && `${group}-1` as const);
-    if (!base || (!avatar && !custom)) return;
-    if (!nicknamePattern.test(nickname.trim())) {
-      setNotice(t.nicknameHelp);
-      return;
-    }
-    setBusy(true);
-    setNotice("");
-    try {
-      await onSave(nickname.trim(), base, custom ? look : null);
-    } catch (error) {
-      const code = typeof error === "object" && error && "code" in error ? error.code : null;
-      setNotice(code === "23505" ? t.taken : t.failed);
-      setBusy(false);
-    }
-  }
-
-  return <>
-    <h1>{t.chooseAvatar}</h1>
-    <form className="account-form" onSubmit={submit}>
-      <label>{t.nickname}
-        <input required minLength={3} maxLength={20} value={nickname} onChange={(event) => setNickname(event.target.value)} autoComplete="nickname" />
-        <small>{t.nicknameHelp}</small>
-      </label>
-      <fieldset>
-        <legend>{t.gender}</legend>
-        <div className="account-tabs">
-          {(["girl", "boy"] as const).map((id) => <label key={id}>
-            <input type="radio" name="avatar-group" value={id} checked={id === group} onChange={() => { setGroup(id); setAvatar(undefined); }} />
-            <span>{t[id]}</span>
-          </label>)}
-        </div>
-      </fieldset>
-      {group && <div className="studio-mode">
-        <button type="button" className="secondary-result-action" aria-pressed={!custom} onClick={() => setCustom(false)}>{locale === "tr" ? "Hazır görünümler" : "Presets"}</button>
-        <button type="button" className="secondary-result-action" aria-pressed={custom} onClick={() => setCustom(true)}>{locale === "tr" ? "Avatarımı kişiselleştir" : "Customize my avatar"}</button>
-      </div>}
-      {group && custom && <AvatarStudio locale={locale} look={look} onChange={setLook} />}
-      {group && !custom && <fieldset>
-        <legend>{t.avatar}</legend>
-        <div className="avatar-options">
-          {avatarIds.filter((id) => id.startsWith(group + "-")).map((id, index) => <label key={id}>
-            <input type="radio" name="avatar" value={id} checked={id === avatar} onChange={() => setAvatar(id)} />
-            <AvatarPortrait id={id} />
-            <span>{t.avatar} {index + 1}</span>
-          </label>)}
-        </div>
-      </fieldset>}
-      {online && <p>{t.visibility}</p>}
-      <button className="primary-result-action" type="submit" disabled={!group || (!custom && !avatar) || busy}>{busy ? t.busy : t.begin}</button>
-      {notice && <p role="status" className="account-message">{notice}</p>}
-    </form>
-  </>;
 }

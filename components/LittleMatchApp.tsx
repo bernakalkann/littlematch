@@ -38,17 +38,18 @@ type SavedSession = {
   phase?: Phase;
   index?: number;
   answers?: AnswerMap;
+  finished?: boolean;
   remoteSession?: RemoteTestSession | null;
   activeInviteCode?: string | null;
   inviteRole?: InviteRole;
 };
 
-export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, onSaveLook, accountNotice }: {
+export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, onSaveProfile, accountNotice }: {
   profile: PlayerCard;
   startQuiz: boolean;
   initialLocale: Locale;
   onSignOut: () => void | Promise<void>;
-  onSaveLook: (look: string | null) => Promise<void>;
+  onSaveProfile: (nickname: string, look: string | null) => Promise<void>;
   accountNotice?: string;
 }) {
   const storageKey = "littlematch-session-v2:" + profile.user_id;
@@ -57,6 +58,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
   const [phase, setPhase] = useState<Phase>("landing");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
+  const [finished, setFinished] = useState(false);
   const [remoteSession, setRemoteSession] = useState<RemoteTestSession | null>(null);
   const [syncState, setSyncState] = useState<SyncState>("local");
   const [activeInviteCode, setActiveInviteCode] = useState<string | null>(null);
@@ -99,6 +101,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
 
           if (saved.answers && typeof saved.answers === "object") {
             setAnswers(saved.answers);
+            setFinished(saved.finished ?? isTestComplete(saved.answers));
           }
 
           if (
@@ -125,6 +128,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
           setPhase(startQuiz ? "game" : "landing");
           setIndex(0);
           setAnswers({});
+          setFinished(false);
           setRemoteSession(null);
         }
       } catch {
@@ -146,6 +150,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
       phase: phase === "pair" ? "result" : phase,
       index,
       answers,
+      finished,
       remoteSession,
       activeInviteCode,
       inviteRole,
@@ -158,6 +163,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
   }, [
     activeInviteCode,
     answers,
+    finished,
     hydrated,
     index,
     inviteRole,
@@ -194,6 +200,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
       return;
     }
 
+    setFinished(true);
     setPhase("result");
     const client = getSupabaseBrowserClient();
     if (client) {
@@ -207,7 +214,6 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
         setSyncState("error");
       }
     }
-
   };
 
   async function publishResult() {
@@ -237,6 +243,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
 
   const handleRestart = () => {
     setAnswers({});
+    setFinished(false);
     setIndex(0);
     setRemoteSession(null);
     clearInvite();
@@ -297,23 +304,33 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
     return <div className="session-loader" aria-label="LittleMatch loading">✦</div>;
   }
 
+  const account = {
+    profile,
+    onCustomize: () => setSideView("avatar"),
+    onSignOut,
+    notice: accountNotice,
+  };
+
   if (showLocalPair) {
-    return <LocalPairGame locale={locale} onLocaleChange={setLocale} onHome={() => setShowLocalPair(false)} />;
+    return <LocalPairGame account={{ ...account, onCustomize: undefined }} locale={locale} onLocaleChange={setLocale} onHome={() => setShowLocalPair(false)} />;
   }
 
-  if (showDirectory) {
-    return <PlayerDirectory locale={locale} profile={profile} onHome={() => setShowDirectory(false)}
+  if (showDirectory && !sideView) {
+    return <PlayerDirectory locale={locale} onLocaleChange={setLocale} account={account} onHome={() => setShowDirectory(false)}
       onPair={() => { setShowDirectory(false); setShowLocalPair(true); }} />;
   }
 
   if (sideView === "avatar") {
-    return <AvatarEditView locale={locale} initial={profile.avatar_look} onSave={onSaveLook} onHome={() => setSideView(null)} />;
+    return <AvatarEditView locale={locale} onLocaleChange={setLocale} account={account}
+      initialNickname={profile.nickname} initialAvatar={profile.avatar_id} initialLook={profile.avatar_look}
+      onSave={async (nickname, _, look) => { await onSaveProfile(nickname, look); setSideView(null); }}
+      onHome={() => setSideView(null)} onLeave={() => setSideView(null)} />;
   }
 
   if (sideView === "discover") {
-    return <DiscoverView locale={locale} profile={profile}
+    return <DiscoverView locale={locale} onLocaleChange={setLocale} account={account}
       onHome={() => { setSideView(null); setPhase("landing"); }}
-      onMyResult={isTestComplete(answers) ? () => { setSideView(null); setPhase("result"); } : undefined} />;
+      onMyResult={finished && isTestComplete(answers) ? () => { setSideView(null); setPhase("result"); } : undefined} />;
   }
 
   if (phase === "pair" && pairResult) {
@@ -321,6 +338,8 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
       <PairResultView
         locale={locale}
         data={pairResult}
+        account={account}
+        onLocaleChange={setLocale}
         onHome={() => setPhase("landing")}
       />
     );
@@ -332,6 +351,8 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
         locale={locale}
         index={index}
         selectedOption={answers[questions[index].id]}
+        account={account}
+        onSelect={(optionId) => setAnswers((current) => ({ ...current, [questions[index].id]: optionId }))}
         syncState={syncState}
         onAnswer={handleAnswer}
         onBack={() => setIndex((current) => Math.max(0, current - 1))}
@@ -353,7 +374,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
       <ResultView
         locale={locale}
         answers={answers}
-        profile={profile}
+        account={account}
         inviteState={inviteState}
         invited={inviteRole === "invitee" && isSupabaseConfigured()}
         inviteLink={inviteLink}
@@ -366,6 +387,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
           if (activeInviteCode && inviteRole === "creator") clearInvite();
           setRemoteSession(null);
           setSyncState("local");
+          setFinished(false);
           setIndex(questions.length - 1);
           setPhase("game");
         }}
@@ -379,11 +401,9 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, o
   return (
     <LandingView
       locale={locale}
-      profile={profile}
-      onSignOut={onSignOut}
-      accountNotice={accountNotice}
+      account={account}
       onLocaleChange={setLocale}
-      onStart={() => setPhase(isTestComplete(answers) ? "result" : "game")}
+      onStart={() => setPhase(finished && isTestComplete(answers) ? "result" : "game")}
       onStartPair={() => setShowDirectory(true)}
       onDiscover={() => setSideView("discover")}
       onCustomize={() => setSideView("avatar")}

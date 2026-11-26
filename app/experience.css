@@ -1,178 +1,55 @@
-/* LittleMatch game flow */
 .language-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.35rem 0.55rem;
+  gap: .25rem;
+  padding: .35rem .55rem;
   border-radius: 999px;
-  background: rgba(255, 240, 214, 0.58);
+  background: #fff0d694;
   color: var(--ink);
-  backdrop-filter: blur(5px);
 }
 
 .language-toggle button {
   border: 0;
-  padding: 0.2rem 0.35rem;
+  padding: .2rem .35rem;
   background: transparent;
   color: inherit;
   cursor: pointer;
-  opacity: 0.58;
+  opacity: .68;
   font-weight: 850;
 }
 
 .language-toggle button.active {
   opacity: 1;
   text-decoration: underline;
-  text-decoration-thickness: 0.13rem;
-  text-underline-offset: 0.2rem;
+  text-decoration-thickness: .13rem;
+  text-underline-offset: .2rem;
 }
 
-.language-toggle.compact {
-  font-size: 0.78rem;
-}
+.language-toggle.compact { font-size: .78rem; }
 
-.session-loader,
-.result-placeholder {
+.session-loader {
   min-height: 100svh;
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 68% 24%, rgba(255, 218, 166, 0.84), transparent 28rem),
+    radial-gradient(circle at 68% 24%, #ffdaa6d6, transparent 28rem),
     linear-gradient(180deg, #b9c4df, #f4c894);
   color: var(--ink);
-}
-
-.session-loader {
   font-size: 2.5rem;
   animation: loaderPulse 1.2s ease-in-out infinite alternate;
 }
 
-.game-shell {
-  min-height: 100svh;
-  padding: 1.2rem clamp(1rem, 4vw, 4rem) 2.5rem;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 88% 15%, rgba(255, 223, 177, 0.78), transparent 24rem),
-    linear-gradient(160deg, #b7c3da 0%, #d3cfda 42%, #efbd83 100%);
-  color: var(--ink);
-}
-
-.game-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 82rem;
-  margin: 0 auto;
-}
-
-.game-wordmark {
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  font-size: clamp(1.5rem, 3vw, 2.1rem);
-  font-weight: 900;
-  letter-spacing: -0.06em;
-}
-
-.game-wordmark span {
-  margin-left: 0.25rem;
-  color: #b4613f;
-  font-size: 0.55em;
-  vertical-align: top;
-}
-
-.game-progress-wrap {
-  max-width: 82rem;
-  margin: 1.25rem auto 0;
-}
-
-.progress-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.45rem;
-  font-size: 0.72rem;
-  font-weight: 800;
-  opacity: 0.72;
-}
-
-.progress-track {
-  height: 0.48rem;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(88, 58, 40, 0.16);
-}
-
-.progress-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: #744d38;
-  transition: width 260ms ease;
-}
-
-.game-layout {
-  width: min(82rem, 100%);
-  margin: clamp(1.5rem, 4vh, 3.2rem) auto 0;
-  display: grid;
-  grid-template-columns: minmax(22rem, 0.92fr) minmax(24rem, 1.08fr);
-  gap: clamp(2rem, 6vw, 6rem);
-  align-items: center;
-}
-
-.question-art {
-  position: relative;
-}
-
 .question-scene {
-  width: min(100%, 29rem);
   margin-inline: auto;
   aspect-ratio: 1;
   overflow: hidden;
-  border: 1px solid #b49171;
   border-radius: 2rem 1.65rem 1.9rem 1.7rem;
   background: #f6e6cb url("../public/question-scenes.webp") no-repeat;
   background-size: 400% 300%;
   box-shadow: 0 .9rem 2.2rem #49352b29;
 }
 
-.scene-caption{margin:.8rem 0 0;text-align:center;font-size:.84rem;font-weight:800;opacity:.68;transform:rotate(-.5deg)}
-.question-copy{max-width:36rem}
-.question-kicker{margin:0 0 .75rem;font-size:.8rem;font-weight:850;letter-spacing:.06em;opacity:.6}
-.question-copy h1{margin:0 0 1.5rem;font-size:clamp(2rem,4vw,3.55rem);line-height:1.05;letter-spacing:-.045em;text-wrap:balance}
-.answer-stack{display:grid;gap:.75rem}
-.answer-choice{width:100%;min-height:4.25rem;display:flex;align-items:center;gap:.9rem;padding:.75rem 1rem;border:.16rem solid rgba(92,61,43,.56);border-radius:1.3rem 1rem 1.45rem 1.05rem/1rem 1.4rem 1.05rem 1.25rem;background:rgba(255,235,205,.7);box-shadow:0 .25rem 0 rgba(81,55,39,.08);color:var(--ink);text-align:left;cursor:pointer;transition:transform 140ms ease,background 140ms ease,border-color 140ms ease}
-.answer-choice:nth-child(even){border-radius:1rem 1.45rem 1.05rem 1.4rem/1.35rem 1rem 1.3rem 1rem}
-.answer-choice:hover,.answer-choice:focus-visible{transform:translateX(.35rem) rotate(-.15deg);background:rgba(255,239,215,.94);border-color:#72503b;outline:none}
-.answer-choice.selected{background:#f7d7a8;border-color:#704a36}
-.answer-choice:disabled{cursor:wait;opacity:.72;transform:none}
-.choice-letter{flex:0 0 auto;width:2.05rem;height:2.05rem;display:grid;place-items:center;border:.12rem solid rgba(85,56,40,.5);border-radius:50%;font-size:.78rem;font-weight:900}
-.game-footer{margin-top:1.2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem}
-.text-action{border:0;padding:.5rem 0;background:transparent;color:inherit;cursor:pointer;font-weight:850}
-.text-action:disabled{opacity:.25;cursor:default}
-.save-note{font-size:.67rem;opacity:.53;max-width:25rem;text-align:right}
-.save-note.sync-cloud{opacity:.7}
-.save-note.sync-error{opacity:.82}
-.result-placeholder{position:relative;grid-template-rows:auto 1fr;padding:1.5rem}
-.result-placeholder>.game-wordmark{justify-self:start;align-self:start}
-.result-placeholder>div{align-self:center;text-align:center;font-weight:800}
-.result-spark{display:block;font-size:2.4rem;animation:loaderPulse 1.2s ease-in-out infinite alternate}
-
-@keyframes characterBreathe{0%,100%{translate:0 0}50%{translate:0 -.35rem}}
-@keyframes loaderPulse{from{opacity:.45;transform:scale(.9) rotate(-5deg)}to{opacity:1;transform:scale(1.08) rotate(5deg)}}
-
-@media (max-width:860px){
-  .game-layout{grid-template-columns:1fr;gap:1.5rem}
-  .question-art{width:min(100%,35rem);margin:0 auto}
-  .question-copy{max-width:42rem;margin:0 auto}
-}
-
-@media (max-width:560px){
-  .game-shell{padding:.9rem .9rem 2rem}
-  .game-progress-wrap{margin-top:.8rem}
-  .game-layout{margin-top:1rem}
-  .question-copy h1{font-size:1.75rem;margin-bottom:1rem}
-  .answer-choice{min-height:3.7rem;padding:.65rem .75rem;font-size:.92rem}
-  .save-note{display:none}
-  .top-actions .soft-link{display:none}
+@keyframes loaderPulse {
+  from { opacity: .45; transform: scale(.9) rotate(-5deg); }
+  to { opacity: 1; transform: scale(1.08) rotate(5deg); }
 }

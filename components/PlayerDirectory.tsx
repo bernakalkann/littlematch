@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { listPlayerCards, type PlayerCard } from "@/lib/supabase/player-cards";
+import { listPlayerCards } from "@/lib/supabase/player-cards";
 import type { Locale } from "@/lib/types";
 import { AvatarPortrait } from "./AvatarPortrait";
+import { SceneHeader, type SceneAccount } from "./SceneHeader";
 
 const copy = {
   tr: {
@@ -12,23 +13,25 @@ const copy = {
     local: "Diğer oyuncuların profilleri bağlı web sürümünde görünür.",
     logged: "Sen", empty: "Şimdilik burada başka oyuncu görünmüyor.",
     failed: "Profiller yüklenemedi.", retry: "Tekrar dene", loading: "Profiller yükleniyor…",
-    home: "Ana sayfa", pair: "Aynı cihazda iki kişi oyna", next: "Sonraki", previous: "Önceki",
+    pair: "Aynı cihazda iki kişi oyna", next: "Sonraki", previous: "Önceki",
   },
   en: {
     title: "Discover your match", players: "LittleMatch players",
     local: "Other players appear in the connected web version.",
     logged: "You", empty: "No other players to show yet.",
     failed: "Profiles could not be loaded.", retry: "Try again", loading: "Loading profiles…",
-    home: "Home", pair: "Play together on this device", next: "Next", previous: "Previous",
+    pair: "Play together on this device", next: "Next", previous: "Previous",
   },
 };
 
-export function PlayerDirectory({ locale, profile, onHome, onPair }: {
+export function PlayerDirectory({ locale, account, onLocaleChange, onHome, onPair }: {
   locale: Locale;
-  profile: PlayerCard;
+  account: SceneAccount;
+  onLocaleChange: (locale: Locale) => void;
   onHome: () => void;
   onPair: () => void;
 }) {
+  const { profile } = account;
   const client = getSupabaseBrowserClient();
   const [page, setPage] = useState(0);
   const [attempt, setAttempt] = useState(0);
@@ -56,11 +59,8 @@ export function PlayerDirectory({ locale, profile, onHome, onPair }: {
 
   const otherCards = result?.cards ?? [];
 
-  return <main className="pair-result-shell">
-    <header className="game-topbar">
-      <button type="button" className="game-wordmark" onClick={onHome}>littlematch<span>✦</span></button>
-      <button type="button" className="secondary-result-action" onClick={onHome}>{t.home}</button>
-    </header>
+  return <main className="painted-shell">
+    <SceneHeader locale={locale} account={account} onHome={onHome} onLocaleChange={onLocaleChange} />
     <section className="player-directory">
       <h1>{t.title}</h1>
       <button type="button" className="primary-result-action" onClick={onPair}>{t.pair}</button>

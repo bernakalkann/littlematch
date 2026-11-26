@@ -7,8 +7,8 @@ import type { PairResultData } from "@/lib/invitations/client";
 import { getCharacterMatch, type AnswerMap } from "@/lib/scoring";
 import type { Locale } from "@/lib/types";
 import { GameView } from "./GameView";
-import { LanguageToggle } from "./LanguageToggle";
 import { PairResultView } from "./PairResultView";
+import { SceneHeader, type SceneAccount } from "./SceneHeader";
 
 const copy = {
   tr: {
@@ -33,10 +33,11 @@ const copy = {
   },
 };
 
-export function LocalPairGame({ locale, onLocaleChange, onHome }: {
+export function LocalPairGame({ locale, onLocaleChange, onHome, account }: {
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
   onHome: () => void;
+  account: SceneAccount;
 }) {
   const [step, setStep] = useState<"intro" | "first" | "handoff" | "second">("intro");
   const [index, setIndex] = useState(0);
@@ -76,7 +77,7 @@ export function LocalPairGame({ locale, onLocaleChange, onHome }: {
     });
   }
 
-  if (result) return <PairResultView locale={locale} data={result} onHome={onHome} />;
+  if (result) return <PairResultView locale={locale} data={result} onHome={onHome} onLocaleChange={onLocaleChange} account={account} />;
 
   if (step === "first" || step === "second") {
     return (
@@ -85,6 +86,8 @@ export function LocalPairGame({ locale, onLocaleChange, onHome }: {
         index={index}
         selectedOption={currentAnswers[questions[index].id]}
         syncState="local"
+        account={account}
+        onSelect={(optionId) => setCurrentAnswers((current) => ({ ...current, [questions[index].id]: optionId }))}
         turnLabel={step === "first" ? t.first : t.second}
         onAnswer={answer}
         onBack={() => setIndex(Math.max(0, index - 1))}
@@ -95,13 +98,8 @@ export function LocalPairGame({ locale, onLocaleChange, onHome }: {
   }
 
   return (
-    <main className="pair-result-shell">
-      <header className="game-topbar">
-        <button type="button" className="game-wordmark" onClick={onHome}>
-          littlematch<span>✦</span>
-        </button>
-        <LanguageToggle locale={locale} onChange={onLocaleChange} compact />
-      </header>
+    <main className="painted-shell">
+      <SceneHeader locale={locale} onLocaleChange={onLocaleChange} onHome={onHome} account={account} />
       <section className="pair-hero pair-intro">
         <h1>{step === "intro" ? t.title : t.pass}</h1>
         <p>{step === "intro" ? t.intro : t.handoff}</p>

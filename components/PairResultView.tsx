@@ -7,10 +7,13 @@ import type { PairResultData } from "@/lib/invitations/client";
 import { relationshipDimensions } from "@/lib/scoring";
 import type { Locale } from "@/lib/types";
 import { CharacterPortrait } from "./CharacterPortrait";
+import { SceneHeader, type SceneAccount } from "./SceneHeader";
 
 type PairResultViewProps = {
   locale: Locale;
   data: PairResultData;
+  account: SceneAccount;
+  onLocaleChange: (locale: Locale) => void;
   onHome: () => void;
 };
 
@@ -46,6 +49,8 @@ const text = {
 export function PairResultView({
   locale,
   data,
+  account,
+  onLocaleChange,
   onHome,
 }: PairResultViewProps) {
   const t = text[locale];
@@ -58,12 +63,8 @@ export function PairResultView({
     questions.find((question) => question.id === id)?.scene[locale] ?? id;
 
   return (
-    <main className="pair-result-shell">
-      <header className="pair-topbar">
-        <button type="button" className="game-wordmark" onClick={onHome}>
-          littlematch<span>✦</span>
-        </button>
-      </header>
+    <main className="painted-shell">
+      <SceneHeader locale={locale} account={account} onLocaleChange={onLocaleChange} onHome={onHome} />
 
       <section className="pair-hero">
         <p className="pair-eyebrow">{t.eyebrow}</p>

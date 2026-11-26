@@ -1,17 +1,3 @@
-.pair-result-shell {
-  min-height: 100svh;
-  padding: 1.2rem clamp(1rem, 4vw, 4rem) 2rem;
-  color: var(--ink);
-  background:
-    radial-gradient(circle at 50% 17%, rgba(255, 226, 177, 0.92), transparent 25rem),
-    linear-gradient(180deg, #aebbd5 0%, #d2cbd6 44%, #efb678 100%);
-}
-
-.pair-topbar {
-  width: min(82rem, 100%);
-  margin: 0 auto;
-}
-
 .pair-hero {
   width: min(66rem, 100%);
   margin: 2rem auto 0;
@@ -194,10 +180,6 @@
 }
 
 @media (max-width: 520px) {
-  .pair-result-shell {
-    padding: 0.9rem;
-  }
-
   .pair-characters {
     min-height: 12rem;
   }
