@@ -20,6 +20,7 @@ import {
 import type { Locale } from "@/lib/types";
 import { GameView } from "./GameView";
 import { LandingView } from "./LandingView";
+import { LocalPairGame } from "./LocalPairGame";
 import { PairResultView } from "./PairResultView";
 import { ResultView, type InviteUiState } from "./ResultView";
 
@@ -53,6 +54,7 @@ export function LittleMatchApp() {
     isSupabaseConfigured() ? "idle" : "unavailable",
   );
   const [pairResult, setPairResult] = useState<PairResultData | null>(null);
+  const [showLocalPair, setShowLocalPair] = useState(false);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
@@ -260,6 +262,10 @@ export function LittleMatchApp() {
     return <div className="session-loader" aria-label="LittleMatch loading">✦</div>;
   }
 
+  if (showLocalPair) {
+    return <LocalPairGame locale={locale} onLocaleChange={setLocale} onHome={() => setShowLocalPair(false)} />;
+  }
+
   if (phase === "pair" && pairResult) {
     return (
       <PairResultView
@@ -321,6 +327,7 @@ export function LittleMatchApp() {
       locale={locale}
       onLocaleChange={setLocale}
       onStart={() => setPhase(isTestComplete(answers) ? "result" : "game")}
+      onStartPair={() => setShowLocalPair(true)}
     />
   );
 }

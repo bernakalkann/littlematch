@@ -9,12 +9,14 @@ type LandingViewProps = {
   locale: Locale;
   onLocaleChange: (locale: Locale) => void;
   onStart: () => void;
+  onStartPair: () => void;
 };
 
 export function LandingView({
   locale,
   onLocaleChange,
   onStart,
+  onStartPair,
 }: LandingViewProps) {
   const t = copy[locale];
 
@@ -51,14 +53,14 @@ export function LandingView({
       </section>
 
       <section className="feature-notes" aria-label="LittleMatch features">
-        <article className="paper-note note-one">
-          <span className="note-icon">▣</span>
+        <button className="paper-note note-one" type="button" onClick={onStart}>
+          <span className="note-icon" aria-hidden="true">▣</span>
           <strong>{t.featureCharacter}</strong>
-        </article>
-        <article className="paper-note note-two">
-          <span className="note-icon">☁</span>
+        </button>
+        <button className="paper-note note-two" type="button" onClick={onStartPair}>
+          <span className="note-icon" aria-hidden="true">☁</span>
           <strong>{t.featureMatch}</strong>
-        </article>
+        </button>
       </section>
 
       <p className="prototype-note">{t.prototype}</p>

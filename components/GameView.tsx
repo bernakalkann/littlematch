@@ -13,6 +13,7 @@ type GameViewProps = {
   index: number;
   selectedOption?: string;
   syncState: SyncState;
+  turnLabel?: string;
   onAnswer: (optionId: string) => void | Promise<void>;
   onBack: () => void;
   onHome: () => void;
@@ -24,6 +25,7 @@ export function GameView({
   index,
   selectedOption,
   syncState,
+  turnLabel,
   onAnswer,
   onBack,
   onHome,
@@ -99,7 +101,7 @@ export function GameView({
             >
               ← {t.back}
             </button>
-            <span className={"save-note sync-" + syncState}>✦ {saveLabel}</span>
+            <span className={"save-note sync-" + syncState}>✦ {turnLabel ?? saveLabel}</span>
           </div>
         </div>
       </section>

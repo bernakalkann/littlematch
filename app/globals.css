@@ -412,11 +412,20 @@ button {
   justify-content: center;
   gap: 0.9rem;
   padding: 1.2rem 1.4rem;
+  border: 0;
+  cursor: pointer;
   text-align: center;
   background: rgba(255, 230, 195, 0.96);
   box-shadow: 0 0.5rem 1.2rem rgba(82, 55, 36, 0.11);
   transform: rotate(-1.2deg);
   clip-path: polygon(3% 5%, 96% 2%, 100% 90%, 92% 98%, 7% 96%, 0 88%);
+}
+
+.paper-note:hover,
+.paper-note:focus-visible {
+  background: #fff0d7;
+  text-decoration: underline;
+  text-underline-offset: 0.24em;
 }
 
 .note-two {

@@ -33,6 +33,17 @@
   letter-spacing: -0.06em;
 }
 
+.pair-intro {
+  max-width: 42rem;
+  padding-top: clamp(2rem, 12vh, 8rem);
+}
+
+.pair-intro p {
+  max-width: 34rem;
+  margin: 1.25rem auto;
+  line-height: 1.55;
+}
+
 .pair-characters {
   min-height: 21rem;
   display: grid;
