@@ -12,7 +12,7 @@ LittleMatch’in sıcak, nostaljik dünyasında **12 küçük seçim yap**, seki
 2. **Birini davet et.** Aynı cihazda sırayla oynayın veya davet bağlantısını gönderip ayrı ayrı cevaplayın.
 3. **Uyumunuzu açın.** İkiniz de bitirince aynı düşündüğünüz ve farklı seçimler yaptığınız yerleri keşfedin.
 
-**LittleMatch’in sıradaki bölümü** takma adını koymak, 10 görünümden avatarını seçmek ve diğer oyuncuları keşfetmekle başlıyor. Arkadaş ekleme, 18+ anonim eşleşme ve karşılıklı istekle sohbet de yol haritasında.
+**LittleMatch’e e-postanla kaydol**, takma adını koy ve 10 görünümden avatarını seç. Testini bitirince **Uyumunu keşfet** ekranında diğer oyuncuların takma adlarını ve avatarlarını görebilirsin. Arkadaş ekleme, 18+ anonim eşleşme ve karşılıklı istekle sohbet de yol haritasında.
 
 [**LittleMatch’i yerelde dene ↓**](#yerelde-oyna)
 
@@ -25,7 +25,7 @@ npm install
 npm run dev
 ```
 
-Oyunu [localhost:3000](http://localhost:3000) adresinde aç. Kişilik testi ve aynı cihazda iki kişilik oyun Supabase olmadan çalışır.
+Oyunu [localhost:3000](http://localhost:3000) adresinde aç. Supabase olmadan takma ad, avatar seçimi, kişilik testi ve aynı cihazda iki kişilik oyun yerel olarak denenebilir.
 
 ## Teknolojiler ve kod
 
@@ -43,10 +43,10 @@ Test, cevaplarını iletişim, bağlılık ve kişisel alan gibi yedi boyutta pu
 <details>
 <summary>Çevrimiçi oyun için Supabase kurulumu</summary>
 
-1. LittleMatch’e özel bir Supabase projesinde [SQL şemasını](database/littlematch-schema.sql) uygula ve Security Advisor üzerinden RLS durumunu kontrol et.
-2. Supabase Auth ayarlarından **Anonymous Sign-Ins** özelliğini etkinleştir.
+1. LittleMatch’e özel bir Supabase projesinde [SQL şemasını](database/littlematch-schema.sql), ardından [oyuncu profili migration’larını](database/migrations/) uygula. Security Advisor üzerinden RLS durumunu kontrol et.
+2. Supabase Auth’ta **Email** sağlayıcısını etkinleştir. Web adresini ve `?recover=1` dönüş adresini Auth URL Configuration altında izinli adreslere ekle. Davetle kayıt için `invite` sorgu parametresini içeren dönüş adreslerini de yapılandır.
 3. [`.env.example`](.env.example) dosyasını temel alarak `.env.local` oluştur. Proje URL’sini, publishable key’i ve sunucu anahtarını ekle.
-4. Davet akışını iki ayrı tarayıcı oturumuyla uçtan uca doğrula.
+4. Doğrulama ve şifre sıfırlama e-postalarını, profil görünürlüğünü ve davet akışını iki ayrı hesapla doğrula.
 
 
 ```dotenv
@@ -74,6 +74,6 @@ npm run build
 
 ## Geliştirme durumu
 
-- **Hazır:** Türkçe ve İngilizce test, karakter sonuçları, aynı cihazda iki kişilik oyun ve Supabase yapılandırmasıyla çalışan davet akışı.
-- **Doğrulanacak:** Mobil ve masaüstü görsel kontrolü, canlı Supabase yapılandırması ve iki ayrı oturumla davet testi.
-- **Planlanan:** Paylaşılabilir sonuç kartları, oyuncu profilleri, arkadaş ekleme, 18+ eşleşme ve sohbet, engelleme ve şikâyet.
+- **Hazır:** E-posta ile kayıt ve giriş ekranları, takma ad, 10 avatar, oyuncu dizini, Türkçe ve İngilizce test, karakter sonuçları ve aynı cihazda iki kişilik oyun.
+- **Doğrulanacak:** Mobil ve masaüstü görsel kontrolü, canlı e-posta doğrulama ve sıfırlama, iki ayrı oturumla profil ve davet testi.
+- **Planlanan:** Paylaşılabilir sonuç kartları, arkadaş ekleme, 18+ eşleşme ve sohbet, engelleme ve şikâyet.

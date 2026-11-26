@@ -1,5 +1,5 @@
-import { LittleMatchApp } from "@/components/LittleMatchApp";
+import { AccountGate } from "@/components/AccountGate";
 
 export default function Home() {
-  return <LittleMatchApp />;
+  return <AccountGate />;
 }

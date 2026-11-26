@@ -10,8 +10,9 @@ import {
   type PairResultData,
 } from "@/lib/invitations/client";
 import { getCharacterMatch, isTestComplete, type AnswerMap } from "@/lib/scoring";
-import { ensureAnonymousUser } from "@/lib/supabase/auth";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { getRegisteredUser } from "@/lib/supabase/auth";
+import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { publishPlayerCard, type PlayerCard } from "@/lib/supabase/player-cards";
 import {
   completeRemoteTest,
   createRemoteTestSession,
@@ -22,6 +23,7 @@ import { GameView } from "./GameView";
 import { LandingView } from "./LandingView";
 import { LocalPairGame } from "./LocalPairGame";
 import { PairResultView } from "./PairResultView";
+import { PlayerDirectory } from "./PlayerDirectory";
 import { ResultView, type InviteUiState } from "./ResultView";
 
 type Phase = "landing" | "game" | "result" | "pair";
@@ -38,11 +40,16 @@ type SavedSession = {
   inviteRole?: InviteRole;
 };
 
-const storageKey = "littlematch-session-v1";
-
-export function LittleMatchApp() {
+export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, accountNotice }: {
+  profile: PlayerCard;
+  startQuiz: boolean;
+  initialLocale: Locale;
+  onSignOut: () => void | Promise<void>;
+  accountNotice?: string;
+}) {
+  const storageKey = "littlematch-session-v2:" + profile.user_id;
   const [hydrated, setHydrated] = useState(false);
-  const [locale, setLocale] = useState<Locale>("tr");
+  const [locale, setLocale] = useState<Locale>(initialLocale);
   const [phase, setPhase] = useState<Phase>("landing");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
@@ -55,6 +62,7 @@ export function LittleMatchApp() {
   );
   const [pairResult, setPairResult] = useState<PairResultData | null>(null);
   const [showLocalPair, setShowLocalPair] = useState(false);
+  const [showDirectory, setShowDirectory] = useState(false);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
@@ -97,15 +105,15 @@ export function LittleMatchApp() {
             setInviteRole(saved.inviteRole);
             setInviteState("ready");
           }
-        } else if (navigator.language.toLowerCase().startsWith("en")) {
-          setLocale("en");
+        } else if (startQuiz) {
+          setPhase("game");
         }
 
         if (urlInviteCode && saved?.activeInviteCode !== urlInviteCode) {
           setActiveInviteCode(urlInviteCode);
           setInviteRole("invitee");
           setInviteState(isSupabaseConfigured() ? "idle" : "unavailable");
-          setPhase("landing");
+          setPhase(startQuiz ? "game" : "landing");
           setIndex(0);
           setAnswers({});
           setRemoteSession(null);
@@ -118,7 +126,7 @@ export function LittleMatchApp() {
     }, 0);
 
     return () => window.clearTimeout(hydrationTimer);
-  }, []);
+  }, [startQuiz, storageKey]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -147,6 +155,7 @@ export function LittleMatchApp() {
     locale,
     phase,
     remoteSession,
+    storageKey,
   ]);
 
   const saveCompletedTest = async (completedAnswers: AnswerMap) => {
@@ -176,10 +185,12 @@ export function LittleMatchApp() {
       return;
     }
 
-    if (isSupabaseConfigured()) {
+    const client = getSupabaseBrowserClient();
+    if (client) {
       setSyncState("saving");
       try {
         await saveCompletedTest(nextAnswers);
+        await publishPlayerCard(client, profile.user_id);
         setSyncState("cloud");
       } catch (error) {
         console.error(error);
@@ -232,7 +243,7 @@ export function LittleMatchApp() {
     try {
       let result;
       if (inviteRole === "invitee") {
-        await ensureAnonymousUser();
+        await getRegisteredUser();
         await claimInvitation(activeInviteCode);
         result = await getInvitationResult(activeInviteCode);
         if (!result.ready) {
@@ -264,6 +275,11 @@ export function LittleMatchApp() {
 
   if (showLocalPair) {
     return <LocalPairGame locale={locale} onLocaleChange={setLocale} onHome={() => setShowLocalPair(false)} />;
+  }
+
+  if (showDirectory) {
+    return <PlayerDirectory locale={locale} profile={profile} onHome={() => setShowDirectory(false)}
+      onPair={() => { setShowDirectory(false); setShowLocalPair(true); }} />;
   }
 
   if (phase === "pair" && pairResult) {
@@ -303,6 +319,7 @@ export function LittleMatchApp() {
       <ResultView
         locale={locale}
         answers={answers}
+        profile={profile}
         inviteState={inviteState}
         invited={inviteRole === "invitee" && isSupabaseConfigured()}
         inviteLink={inviteLink}
@@ -325,9 +342,12 @@ export function LittleMatchApp() {
   return (
     <LandingView
       locale={locale}
+      profile={profile}
+      onSignOut={onSignOut}
+      accountNotice={accountNotice}
       onLocaleChange={setLocale}
       onStart={() => setPhase(isTestComplete(answers) ? "result" : "game")}
-      onStartPair={() => setShowLocalPair(true)}
+      onStartPair={() => setShowDirectory(true)}
     />
   );
 }

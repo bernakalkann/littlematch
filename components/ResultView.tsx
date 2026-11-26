@@ -4,6 +4,8 @@ import { useState } from "react";
 import { dimensionLabels } from "@/data/dimensions";
 import { getCharacterMatch, relationshipDimensions, type AnswerMap } from "@/lib/scoring";
 import type { Locale } from "@/lib/types";
+import type { PlayerCard } from "@/lib/supabase/player-cards";
+import { AvatarPortrait } from "./AvatarPortrait";
 import { CharacterPortrait } from "./CharacterPortrait";
 import { LanguageToggle } from "./LanguageToggle";
 
@@ -18,6 +20,7 @@ export type InviteUiState =
 type ResultViewProps = {
   locale: Locale;
   answers: AnswerMap;
+  profile: PlayerCard;
   inviteState: InviteUiState;
   inviteLink?: string | null;
   invited: boolean;
@@ -81,6 +84,7 @@ const text = {
 export function ResultView({
   locale,
   answers,
+  profile,
   inviteState,
   inviteLink,
   invited,
@@ -158,6 +162,7 @@ export function ResultView({
         </div>
 
         <div className="result-copy">
+          <span className="account-chip"><AvatarPortrait id={profile.avatar_id} /><strong>{profile.nickname}</strong></span>
           <p className="result-eyebrow">{t.eyebrow}</p>
           <p className="animal-name">{character.animal[locale]}</p>
           <h1>{character.name[locale]}</h1>

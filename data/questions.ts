@@ -3,15 +3,15 @@ import type { Question } from "@/lib/types";
 export const questions: Question[] = [
   {
     id: "late-night-thought",
-    scene: { tr: "Gece 00:47. Telefonun sessizde.", en: "12:47 AM. Your phone is on silent." },
+    scene: { tr: "00:47. Keşfette tam ona göre bir video çıktı.", en: "12:47 AM. Your feed just served up a video that's so them." },
     prompt: {
-      tr: "Sevdiğin biri bir anda aklına geliyor. İçinden ne yapmak geliyor?",
-      en: "Someone you care about suddenly crosses your mind. What do you feel like doing?",
+      tr: "Flörtün bir anda aklına düştü. İlk hamlen ne?",
+      en: "Your crush just crossed your mind. What's your first move?",
     },
     options: [
       {
         id: "send-now",
-        label: { tr: "Kısa da olsa hemen yazarım.", en: "I send a short message right away." },
+        label: { tr: "DM’ye girip “bu tam sen” yazarım.", en: "I slide into their DMs with ‘this is so you.’" },
         weights: { communication: 3, romance: 2, depth: 2 },
       },
       {
@@ -33,7 +33,7 @@ export const questions: Question[] = [
   },
   {
     id: "unplanned-day",
-    scene: { tr: "Cumartesi sabahı. Hiç plan yok.", en: "Saturday morning. No plans at all." },
+    scene: { tr: "Cumartesi. Grup sohbeti sessiz, takvim boş.", en: "Saturday. The group chat is quiet and the calendar's empty." },
     prompt: {
       tr: "Birlikte geçirilecek boş bir gün sana en çok nasıl güzel gelir?",
       en: "What would make an empty day together feel best to you?",
@@ -63,10 +63,10 @@ export const questions: Question[] = [
   },
   {
     id: "small-argument",
-    scene: { tr: "Küçük bir tartışma oldu.", en: "A small disagreement happens." },
+    scene: { tr: "Mesajlaşırken tonunuz bir anda değişti.", en: "The tone of the chat shifts out of nowhere." },
     prompt: {
-      tr: "Ortam biraz gerildiğinde sana en doğal gelen ne?",
-      en: "When things get tense, what feels most natural to you?",
+      tr: "Mesajdaki o garip havayı fark ettin. Ne yaparsın?",
+      en: "The chat feels a little off. What do you do?",
     },
     options: [
       {
@@ -93,7 +93,7 @@ export const questions: Question[] = [
   },
   {
     id: "surprise",
-    scene: { tr: "Hiç beklemediğin bir sürpriz.", en: "A surprise you did not see coming." },
+    scene: { tr: "Bildirim geldi. Bu sefer beklemediğin bir şey var.", en: "A notification pops up with something you didn't expect." },
     prompt: {
       tr: "Seni en çok hangisi mutlu eder?",
       en: "Which kind would make you happiest?",
@@ -123,7 +123,7 @@ export const questions: Question[] = [
   },
   {
     id: "time-apart",
-    scene: { tr: "Bir süre görüşemeyeceksiniz.", en: "You will not be able to see each other for a while." },
+    scene: { tr: "Bu hafta takvimler hiç tutmuyor.", en: "Your schedules aren't lining up this week." },
     prompt: {
       tr: "Bağın sürdüğünü sana en çok ne hissettirir?",
       en: "What makes the connection still feel present to you?",
@@ -131,17 +131,17 @@ export const questions: Question[] = [
     options: [
       {
         id: "regular-checkin",
-        label: { tr: "Düzenli kısa konuşmalar.", en: "Regular short check-ins." },
+        label: { tr: "Gün içinde arada bir gelen “n’apıyorsun?” mesajları.", en: "Little ‘what are you up to?’ texts throughout the day." },
         weights: { communication: 3, trust: 2, future: 1 },
       },
       {
         id: "long-calls",
-        label: { tr: "Daha seyrek ama uzun ve derin konuşmalar.", en: "Less frequent but long, deep conversations." },
+        label: { tr: "Arada bir, saatlerin nasıl geçtiğini anlamadığımız bir görüntülü konuşma.", en: "An occasional video call where we lose track of time." },
         weights: { depth: 3, communication: 2, trust: 2 },
       },
       {
         id: "shared-moments",
-        label: { tr: "Günün içinden fotoğrafsız küçük notlar, şarkılar, anlar.", en: "Small notes, songs and moments from the day." },
+        label: { tr: "O günün şarkısı, komik bir fotoğraf ya da 10 saniyelik ses kaydı.", en: "The song of the day, a funny photo or a 10-second voice note." },
         weights: { romance: 3, communication: 2, depth: 1 },
       },
       {
@@ -153,7 +153,7 @@ export const questions: Question[] = [
   },
   {
     id: "feelings",
-    scene: { tr: "İçinde güçlü bir duygu var.", en: "You are feeling something strongly." },
+    scene: { tr: "Sohbet uzadı. İçinden bir şey söylemek geliyor.", en: "The chat's getting good. There's something you want to say." },
     prompt: {
       tr: "Duygularını göstermenin sana en yakın yolu hangisi?",
       en: "Which way of showing feelings feels most like you?",
@@ -183,7 +183,7 @@ export const questions: Question[] = [
   },
   {
     id: "future",
-    scene: { tr: "Sohbet gelecek hayallerine geldi.", en: "The conversation turns to future dreams." },
+    scene: { tr: "“Bir gün beraber şuraya gidelim” dedi.", en: "They just said, ‘We should go there together someday.’" },
     prompt: {
       tr: "İlişkide gelecek konuşmaları sende nasıl bir his uyandırır?",
       en: "How do future conversations feel to you in a relationship?",
@@ -213,7 +213,7 @@ export const questions: Question[] = [
   },
   {
     id: "personal-space",
-    scene: { tr: "İkinizin de yoğun olduğu bir hafta.", en: "You are both having a busy week." },
+    scene: { tr: "Son teslimler üst üste. İkinizin de pili yüzde 5.", en: "Deadlines are piling up. You're both running at 5%." },
     prompt: {
       tr: "Kişisel alan konusunda en rahat hissettiğin denge hangisi?",
       en: "Which balance around personal space feels best?",
@@ -243,7 +243,7 @@ export const questions: Question[] = [
   },
   {
     id: "reassurance",
-    scene: { tr: "Bir şey kafana takıldı.", en: "Something is on your mind." },
+    scene: { tr: "‘Görüldü’ yazıyor, cevap gelmedi.", en: "It says ‘seen,’ and there's no reply yet." },
     prompt: {
       tr: "Karşındaki kişiden ne görmek seni daha çabuk rahatlatır?",
       en: "What helps you feel reassured most quickly?",
@@ -273,7 +273,7 @@ export const questions: Question[] = [
   },
   {
     id: "new-thing",
-    scene: { tr: "Önünüzde boş bir akşam var.", en: "You have a completely free evening." },
+    scene: { tr: "Arkadaşın “bu akşam bir planım var” diye yazdı.", en: "They texted, ‘I've got an idea for tonight.’" },
     prompt: {
       tr: "Birlikte yeni bir şey deneme fikrine ne kadar açıksın?",
       en: "How open are you to trying something new together?",
@@ -303,7 +303,7 @@ export const questions: Question[] = [
   },
   {
     id: "remembered-detail",
-    scene: { tr: "Aylar önce söylediğin küçük bir şey hatırlanmış.", en: "A tiny thing you said months ago was remembered." },
+    scene: { tr: "Aylar önce bahsettiğin şarkıyı ortak çalma listenize eklemiş.", en: "They added the song you mentioned months ago to your shared playlist." },
     prompt: {
       tr: "Böyle ayrıntılar senin için ne ifade eder?",
       en: "What do details like that mean to you?",
@@ -333,7 +333,7 @@ export const questions: Question[] = [
   },
   {
     id: "quiet-moment",
-    scene: { tr: "Birlikte sessizce oturuyorsunuz.", en: "You are sitting together in silence." },
+    scene: { tr: "Yan yanasınız, bir süredir ikiniz de kendi işiyle meşgul.", en: "You're together, each doing your own thing for a while." },
     prompt: {
       tr: "O sessizlik ne zaman sana iyi gelir?",
       en: "When does that silence feel good to you?",

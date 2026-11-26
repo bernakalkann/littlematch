@@ -3,6 +3,7 @@ import "./globals.css";
 import "./experience.css";
 import "./result.css";
 import "./pair.css";
+import "./account.css";
 
 export const metadata: Metadata = {
   title: "LittleMatch — Küçük seçimler, beklenmedik karşılaşmalar",

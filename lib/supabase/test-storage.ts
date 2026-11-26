@@ -1,6 +1,6 @@
 import type { CharacterId, DimensionScores, Locale } from "@/lib/types";
 import type { AnswerMap } from "@/lib/scoring";
-import { ensureAnonymousUser } from "./auth";
+import { getRegisteredUser } from "./auth";
 import { getSupabaseBrowserClient } from "./client";
 
 export type RemoteTestSession = {
@@ -14,7 +14,7 @@ export async function createRemoteTestSession(
   const supabase = getSupabaseBrowserClient();
   if (!supabase) return null;
 
-  const user = await ensureAnonymousUser();
+  const user = await getRegisteredUser();
   if (!user) return null;
 
   const { error: profileError } = await supabase.from("profiles").upsert(
