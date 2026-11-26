@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { CharacterId } from "@/lib/types";
 
 type CharacterPortraitProps = {
@@ -5,6 +6,7 @@ type CharacterPortraitProps = {
 };
 
 export function CharacterPortrait({ id }: CharacterPortraitProps) {
+  const wobbleId = "portrait-wobble-" + useId().replace(/[^\w-]/g, "");
   const pointed = id === "fox" || id === "cat" || id === "hedgehog";
   const floppy = id === "dog";
   const longEars = id === "rabbit";
@@ -19,7 +21,7 @@ export function CharacterPortrait({ id }: CharacterPortraitProps) {
       aria-label={id}
     >
       <defs>
-        <filter id={"portraitWobble-" + id}>
+        <filter id={wobbleId}>
           <feTurbulence
             type="fractalNoise"
             baseFrequency="0.009"
@@ -38,7 +40,7 @@ export function CharacterPortrait({ id }: CharacterPortraitProps) {
       </defs>
 
       <g
-        filter={"url(#portraitWobble-" + id + ")"}
+        filter={`url(#${wobbleId})`}
         stroke="currentColor"
         strokeWidth="7"
         strokeLinecap="round"

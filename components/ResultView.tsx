@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { dimensionLabels } from "@/data/dimensions";
+import { downloadResultCard } from "@/lib/result-card";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { getCharacterMatch, relationshipDimensions, type AnswerMap } from "@/lib/scoring";
 import type { Locale } from "@/lib/types";
 import type { PlayerCard } from "@/lib/supabase/player-cards";
@@ -30,6 +32,9 @@ type ResultViewProps = {
   onHome: () => void;
   onCreateInvite: () => void | Promise<void>;
   onCheckPair: () => void | Promise<void>;
+  onPublish: () => Promise<void>;
+  onDiscover: () => void;
+  resultSaving: boolean;
 };
 
 const text = {
@@ -94,37 +99,35 @@ export function ResultView({
   onHome,
   onCreateInvite,
   onCheckPair,
+  onPublish,
+  onDiscover,
+  resultSaving,
 }: ResultViewProps) {
-  const [shared, setShared] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareNotice, setShareNotice] = useState("");
   const [inviteCopied, setInviteCopied] = useState(false);
+  const portrait = useRef<HTMLDivElement>(null);
   const result = getCharacterMatch(answers);
   const character = result.character;
   const t = text[locale];
 
-  const share = async () => {
-    const shareText =
-      character.animal[locale] +
-      " — " +
-      character.name[locale] +
-      "\n" +
-      character.tagline[locale];
-
+  const tr = locale === "tr";
+  const shareAction = async (publish: boolean) => {
+    setShareBusy(true);
+    setShareNotice("");
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "LittleMatch",
-          text: shareText,
-          url: window.location.origin,
-        });
+      if (publish) {
+        await onPublish();
+        setShareNotice(tr ? "Kartın Keşfet’e eklendi." : "Your card is now in Discover.");
       } else {
-        await navigator.clipboard.writeText(
-          shareText + "\n" + window.location.origin,
-        );
-        setShared(true);
-        window.setTimeout(() => setShared(false), 1800);
+        await downloadResultCard(result, profile.nickname, locale, portrait.current?.querySelector("svg"));
+        setShareNotice(tr ? "Sonuç kartı indiriliyor." : "Your result card is downloading.");
       }
     } catch {
-      // Closing the share sheet or blocking clipboard is harmless.
+      setShareNotice(tr ? "İşlem tamamlanamadı. Tekrar dene." : "Could not complete the action. Try again.");
+    } finally {
+      setShareBusy(false);
     }
   };
 
@@ -150,7 +153,7 @@ export function ResultView({
       </header>
 
       <section className="result-hero">
-        <div className="portrait-world">
+        <div ref={portrait} className="portrait-world">
           <span className="portrait-sun" />
           <span className="portrait-hill hill-back" />
           <span className="portrait-hill hill-front" />
@@ -162,7 +165,7 @@ export function ResultView({
         </div>
 
         <div className="result-copy">
-          <span className="account-chip"><AvatarPortrait id={profile.avatar_id} /><strong>{profile.nickname}</strong></span>
+          <span className="account-chip"><AvatarPortrait id={profile.avatar_id} look={profile.avatar_look} /><strong>{profile.nickname}</strong></span>
           <p className="result-eyebrow">{t.eyebrow}</p>
           <p className="animal-name">{character.animal[locale]}</p>
           <h1>{character.name[locale]}</h1>
@@ -170,18 +173,27 @@ export function ResultView({
           <p className="character-description">{character.description[locale]}</p>
 
           <div className="result-actions">
-            <button type="button" className="primary-result-action" onClick={share}>
-              {shared ? t.copied : t.share}
+            <button type="button" className="primary-result-action" aria-expanded={shareOpen} aria-controls="share-result-panel" onClick={() => setShareOpen(!shareOpen)}>
+              {t.share}
             </button>
-            <button type="button" className="secondary-result-action" onClick={onReview} disabled={inviteState === "creating"}>
+            <button type="button" className="secondary-result-action" onClick={onReview} disabled={inviteState === "creating" || resultSaving || shareBusy}>
               {t.review}
             </button>
           </div>
+          {shareOpen && <section id="share-result-panel" className="share-result-panel" aria-label={t.share}>
+            <p>{isSupabaseConfigured()
+              ? (tr ? "Keşfet’te takma adın, avatarın ve karakter sonucun görünür." : "Discover shows your nickname, avatar and character result.")
+              : (tr ? "Bu önizlemede Keşfet paylaşımları bu tarayıcıda saklanır." : "Discover posts stay in this browser in the preview.")}</p>
+            <button type="button" className="secondary-result-action" disabled={shareBusy} onClick={() => shareAction(false)}>{tr ? "Kartı PNG olarak indir" : "Download PNG card"}</button>
+            <button type="button" className="primary-result-action" disabled={shareBusy || resultSaving} onClick={() => shareAction(true)}>{tr ? "Keşfet’te paylaş" : "Post to Discover"}</button>
+            <button type="button" className="account-link" onClick={onDiscover}>{tr ? "Keşfet’e git" : "Open Discover"}</button>
+            {shareNotice && <p role="status">{shareNotice}</p>}
+          </section>}
 
           <div className={"invite-note invite-" + inviteState} aria-live="polite">
             {inviteState === "unavailable" && <p>{t.unavailable}</p>}
             {!invited && !inviteLink && (inviteState === "idle" || inviteState === "error") && (
-              <button type="button" onClick={onCreateInvite}>{t.together} ✦</button>
+              <button type="button" onClick={onCreateInvite} disabled={resultSaving || shareBusy}>{t.together} ✦</button>
             )}
             {inviteState === "creating" && <p>{t.creating}</p>}
             {inviteState !== "creating" && inviteLink && (
@@ -249,7 +261,7 @@ export function ResultView({
 
       <footer className="result-footer">
         <p>{t.disclaimer}</p>
-        <button type="button" onClick={onRestart} disabled={inviteState === "creating"}>{t.restart} ↻</button>
+        <button type="button" onClick={onRestart} disabled={inviteState === "creating" || resultSaving || shareBusy}>{t.restart} ↻</button>
       </footer>
     </main>
   );

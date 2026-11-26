@@ -12,7 +12,7 @@ LittleMatch’in sıcak, nostaljik dünyasında **12 küçük seçim yap**, seki
 2. **Birini davet et.** Aynı cihazda sırayla oynayın veya davet bağlantısını gönderip ayrı ayrı cevaplayın.
 3. **Uyumunuzu açın.** İkiniz de bitirince aynı düşündüğünüz ve farklı seçimler yaptığınız yerleri keşfedin.
 
-**LittleMatch’e e-postanla kaydol**, takma adını koy ve 10 görünümden avatarını seç. Testini bitirince **Uyumunu keşfet** ekranında diğer oyuncuların takma adlarını ve avatarlarını görebilirsin. Arkadaş ekleme, 18+ anonim eşleşme ve karşılıklı istekle sohbet de yol haritasında.
+**LittleMatch’e e-postanla kaydol**, takma adını koy ve hazır bir avatar seç veya görünümünü düzenle. Testini bitirince sonuç kartını PNG olarak indirebilir ya da **Keşfet**’te paylaşabilirsin. **Uyumunu keşfet** kayıtlı oyuncuların takma adlarını ve avatarlarını gösterir. Arkadaş ekleme, 18+ anonim eşleşme ve karşılıklı istekle sohbet de yol haritasında.
 
 [**LittleMatch’i yerelde dene ↓**](#yerelde-oyna)
 
@@ -76,4 +76,4 @@ npm run build
 
 - **Hazır:** E-posta ile kayıt ve giriş ekranları, takma ad, 10 avatar, oyuncu dizini, Türkçe ve İngilizce test, karakter sonuçları ve aynı cihazda iki kişilik oyun.
 - **Doğrulanacak:** Mobil ve masaüstü görsel kontrolü, canlı e-posta doğrulama ve sıfırlama, iki ayrı oturumla profil ve davet testi.
-- **Planlanan:** Paylaşılabilir sonuç kartları, arkadaş ekleme, 18+ eşleşme ve sohbet, engelleme ve şikâyet.
+- **Planlanan:** Arkadaş ekleme, 18+ eşleşme ve sohbet, engelleme ve şikâyet.

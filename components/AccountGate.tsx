@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import type { User } from "@supabase/supabase-js";
-import { avatarIds, isAvatarId, type AvatarGroup, type AvatarId } from "@/data/avatars";
+import { avatarIds, defaultLook, isAvatarId, type AvatarGroup, type AvatarId } from "@/data/avatars";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { loadPlayerCard, savePlayerCard, type PlayerCard } from "@/lib/supabase/player-cards";
+import { loadPlayerCard, savePlayerCard, updatePlayerAvatar, type PlayerCard } from "@/lib/supabase/player-cards";
 import type { Locale } from "@/lib/types";
 import { AvatarPortrait } from "./AvatarPortrait";
+import { AvatarStudio } from "./AvatarStudio";
 import { CozyScene } from "./CozyScene";
 import { LanguageToggle } from "./LanguageToggle";
 import { LittleMatchApp } from "./LittleMatchApp";
@@ -189,7 +190,11 @@ export function AccountGate() {
 
   if (previewCard) {
     return <LittleMatchApp key={previewCard.user_id} profile={previewCard} startQuiz={previewStartsQuiz}
-      initialLocale={locale} onSignOut={() => {
+      initialLocale={locale} onSaveLook={async (avatar_look) => {
+        const next = { ...previewCard, avatar_look };
+        window.localStorage.setItem(previewKey, JSON.stringify(next));
+        setPreviewCard(next);
+      }} onSignOut={() => {
         try { window.localStorage.removeItem(previewKey); } catch { /* Storage may be unavailable. */ }
         setPreviewCard(null);
         setPreviewOnboarding(false);
@@ -200,9 +205,9 @@ export function AccountGate() {
 
   if (previewOnboarding) {
     return <Scene locale={locale} onLocaleChange={setLocale}>
-      <AvatarPicker locale={locale} initialNickname={nickname} online={false} onSave={async (name, avatar_id) => {
+      <AvatarPicker locale={locale} initialNickname={nickname} online={false} onSave={async (name, avatar_id, avatar_look) => {
         const localId = window.crypto.randomUUID?.() ?? String(Date.now());
-        const card: PlayerCard = { user_id: localId, nickname: name, avatar_id, listed: false };
+        const card: PlayerCard = { user_id: localId, nickname: name, avatar_id, avatar_look, listed: false };
         try { window.localStorage.setItem(previewKey, JSON.stringify(card)); } catch { /* Storage may be unavailable. */ }
         setPreviewStartsQuiz(true);
         setPreviewCard(card);
@@ -275,7 +280,10 @@ function RegisteredPlayer({ user, initialNickname, locale, onLocaleChange }: {
     if (error) setSignOutFailed(true);
   }
 
-  if (card) return <LittleMatchApp profile={card} startQuiz={startQuiz} initialLocale={locale}
+  if (card) return <LittleMatchApp profile={card} startQuiz={startQuiz} initialLocale={locale} onSaveLook={async (avatar_look) => {
+    await updatePlayerAvatar(client, user.id, avatar_look);
+    setCard({ ...card, avatar_look });
+  }}
     onSignOut={signOut} accountNotice={signOutFailed ? t.failed : undefined} />;
 
   return <Scene locale={locale} onLocaleChange={onLocaleChange}>
@@ -284,8 +292,8 @@ function RegisteredPlayer({ user, initialNickname, locale, onLocaleChange }: {
       <button className="primary-result-action" onClick={() => { setLoadFailed(false); setAttempt(attempt + 1); }}>{t.retry}</button>
     </> : card === undefined ? <p role="status">{t.busy}</p> :
       <AvatarPicker locale={locale} initialNickname={initialNickname || String(user.user_metadata?.nickname ?? "")} online
-        onSave={async (nickname, avatar_id) => {
-          const saved = await savePlayerCard(client, { user_id: user.id, nickname, avatar_id });
+        onSave={async (nickname, avatar_id, avatar_look) => {
+          const saved = await savePlayerCard(client, { user_id: user.id, nickname, avatar_id, avatar_look });
           setStartQuiz(true);
           setCard(saved);
         }} />}
@@ -298,18 +306,21 @@ function AvatarPicker({ locale, initialNickname, online, onSave }: {
   locale: Locale;
   initialNickname: string;
   online: boolean;
-  onSave: (name: string, id: AvatarId) => Promise<void>;
+  onSave: (name: string, id: AvatarId, look: string | null) => Promise<void>;
 }) {
   const [nickname, setNickname] = useState(initialNickname);
   const [group, setGroup] = useState<AvatarGroup>();
   const [avatar, setAvatar] = useState<AvatarId>();
+  const [custom, setCustom] = useState(false);
+  const [look, setLook] = useState(defaultLook);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const t = words[locale];
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!avatar) return;
+    const base = avatar ?? (group && `${group}-1` as const);
+    if (!base || (!avatar && !custom)) return;
     if (!nicknamePattern.test(nickname.trim())) {
       setNotice(t.nicknameHelp);
       return;
@@ -317,7 +328,7 @@ function AvatarPicker({ locale, initialNickname, online, onSave }: {
     setBusy(true);
     setNotice("");
     try {
-      await onSave(nickname.trim(), avatar);
+      await onSave(nickname.trim(), base, custom ? look : null);
     } catch (error) {
       const code = typeof error === "object" && error && "code" in error ? error.code : null;
       setNotice(code === "23505" ? t.taken : t.failed);
@@ -341,7 +352,12 @@ function AvatarPicker({ locale, initialNickname, online, onSave }: {
           </label>)}
         </div>
       </fieldset>
-      {group && <fieldset>
+      {group && <div className="studio-mode">
+        <button type="button" className="secondary-result-action" aria-pressed={!custom} onClick={() => setCustom(false)}>{locale === "tr" ? "Hazır görünümler" : "Presets"}</button>
+        <button type="button" className="secondary-result-action" aria-pressed={custom} onClick={() => setCustom(true)}>{locale === "tr" ? "Avatarımı kişiselleştir" : "Customize my avatar"}</button>
+      </div>}
+      {group && custom && <AvatarStudio locale={locale} look={look} onChange={setLook} />}
+      {group && !custom && <fieldset>
         <legend>{t.avatar}</legend>
         <div className="avatar-options">
           {avatarIds.filter((id) => id.startsWith(group + "-")).map((id, index) => <label key={id}>
@@ -352,7 +368,7 @@ function AvatarPicker({ locale, initialNickname, online, onSave }: {
         </div>
       </fieldset>}
       {online && <p>{t.visibility}</p>}
-      <button className="primary-result-action" type="submit" disabled={!avatar || busy}>{busy ? t.busy : t.begin}</button>
+      <button className="primary-result-action" type="submit" disabled={!group || (!custom && !avatar) || busy}>{busy ? t.busy : t.begin}</button>
       {notice && <p role="status" className="account-message">{notice}</p>}
     </form>
   </>;

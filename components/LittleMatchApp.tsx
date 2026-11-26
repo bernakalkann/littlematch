@@ -10,6 +10,7 @@ import {
   type PairResultData,
 } from "@/lib/invitations/client";
 import { getCharacterMatch, isTestComplete, type AnswerMap } from "@/lib/scoring";
+import { writeResultPost } from "@/lib/result-posts";
 import { getRegisteredUser } from "@/lib/supabase/auth";
 import { getSupabaseBrowserClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { publishPlayerCard, type PlayerCard } from "@/lib/supabase/player-cards";
@@ -20,6 +21,8 @@ import {
 } from "@/lib/supabase/test-storage";
 import type { Locale } from "@/lib/types";
 import { GameView } from "./GameView";
+import { AvatarEditView } from "./AvatarEditView";
+import { DiscoverView } from "./DiscoverView";
 import { LandingView } from "./LandingView";
 import { LocalPairGame } from "./LocalPairGame";
 import { PairResultView } from "./PairResultView";
@@ -40,11 +43,12 @@ type SavedSession = {
   inviteRole?: InviteRole;
 };
 
-export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, accountNotice }: {
+export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, onSaveLook, accountNotice }: {
   profile: PlayerCard;
   startQuiz: boolean;
   initialLocale: Locale;
   onSignOut: () => void | Promise<void>;
+  onSaveLook: (look: string | null) => Promise<void>;
   accountNotice?: string;
 }) {
   const storageKey = "littlematch-session-v2:" + profile.user_id;
@@ -63,6 +67,11 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, a
   const [pairResult, setPairResult] = useState<PairResultData | null>(null);
   const [showLocalPair, setShowLocalPair] = useState(false);
   const [showDirectory, setShowDirectory] = useState(false);
+  const [sideView, setSideView] = useState<"avatar" | "discover" | null>(null);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [phase, showLocalPair, showDirectory, sideView]);
 
   useEffect(() => {
     const hydrationTimer = window.setTimeout(() => {
@@ -185,6 +194,7 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, a
       return;
     }
 
+    setPhase("result");
     const client = getSupabaseBrowserClient();
     if (client) {
       setSyncState("saving");
@@ -198,8 +208,22 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, a
       }
     }
 
-    setPhase("result");
   };
+
+  async function publishResult() {
+    const client = getSupabaseBrowserClient();
+    const result = getCharacterMatch(answers);
+    if (!client) {
+      await writeResultPost(profile, result.character.id);
+      return;
+    }
+    const session = syncState === "cloud" && remoteSession
+      ? remoteSession
+      : await saveCompletedTest(answers);
+    await publishPlayerCard(client, profile.user_id);
+    await writeResultPost(profile, result.character.id, session.id);
+    setSyncState("cloud");
+  }
 
   const clearInvite = () => {
     const url = new URL(window.location.href);
@@ -282,6 +306,16 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, a
       onPair={() => { setShowDirectory(false); setShowLocalPair(true); }} />;
   }
 
+  if (sideView === "avatar") {
+    return <AvatarEditView locale={locale} initial={profile.avatar_look} onSave={onSaveLook} onHome={() => setSideView(null)} />;
+  }
+
+  if (sideView === "discover") {
+    return <DiscoverView locale={locale} profile={profile}
+      onHome={() => { setSideView(null); setPhase("landing"); }}
+      onMyResult={isTestComplete(answers) ? () => { setSideView(null); setPhase("result"); } : undefined} />;
+  }
+
   if (phase === "pair" && pairResult) {
     return (
       <PairResultView
@@ -323,6 +357,9 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, a
         inviteState={inviteState}
         invited={inviteRole === "invitee" && isSupabaseConfigured()}
         inviteLink={inviteLink}
+        resultSaving={syncState === "saving"}
+        onPublish={publishResult}
+        onDiscover={() => setSideView("discover")}
         onLocaleChange={setLocale}
         onRestart={handleRestart}
         onReview={() => {
@@ -348,6 +385,8 @@ export function LittleMatchApp({ profile, startQuiz, initialLocale, onSignOut, a
       onLocaleChange={setLocale}
       onStart={() => setPhase(isTestComplete(answers) ? "result" : "game")}
       onStartPair={() => setShowDirectory(true)}
+      onDiscover={() => setSideView("discover")}
+      onCustomize={() => setSideView("avatar")}
     />
   );
 }

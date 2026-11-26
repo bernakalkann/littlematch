@@ -12,6 +12,8 @@ type LandingViewProps = {
   onLocaleChange: (locale: Locale) => void;
   onStart: () => void;
   onStartPair: () => void;
+  onDiscover: () => void;
+  onCustomize: () => void;
   profile: PlayerCard;
   onSignOut: () => void | Promise<void>;
   accountNotice?: string;
@@ -22,6 +24,8 @@ export function LandingView({
   onLocaleChange,
   onStart,
   onStartPair,
+  onDiscover,
+  onCustomize,
   profile,
   onSignOut,
   accountNotice,
@@ -39,7 +43,12 @@ export function LandingView({
 
         <nav className="top-actions" aria-label="Main navigation">
           <LanguageToggle locale={locale} onChange={onLocaleChange} compact />
-          <span className="account-chip"><AvatarPortrait id={profile.avatar_id} /><strong>{profile.nickname}</strong></span>
+          <button className="account-chip avatar-edit-button" type="button" onClick={onCustomize}
+            aria-label={locale === "tr" ? "Avatarımı kişiselleştir" : "Customize my avatar"}
+            title={locale === "tr" ? "Avatarımı kişiselleştir" : "Customize my avatar"}>
+            <AvatarPortrait id={profile.avatar_id} look={profile.avatar_look} /><strong>{profile.nickname}</strong>
+            <span aria-hidden="true">✎</span>
+          </button>
           <button type="button" className="soft-link" onClick={onSignOut}>{locale === "tr" ? "Çıkış yap" : "Log out"}</button>
         </nav>
       </header>
@@ -71,6 +80,10 @@ export function LandingView({
         <button className="paper-note note-two" type="button" onClick={onStartPair}>
           <span className="note-icon" aria-hidden="true">☁</span>
           <strong>{t.featureMatch}</strong>
+        </button>
+        <button className="paper-note note-three" type="button" onClick={onDiscover}>
+          <span className="note-icon" aria-hidden="true">✦</span>
+          <strong>{locale === "tr" ? "Keşfet" : "Discover"}</strong>
         </button>
       </section>
 

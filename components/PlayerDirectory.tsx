@@ -69,8 +69,8 @@ export function PlayerDirectory({ locale, profile, onHome, onPair }: {
       {client && !result && !failed && <p role="status">{t.loading}</p>}
       {failed && <p role="status">{t.failed} <button type="button" className="account-link" onClick={() => load(page)}>{t.retry}</button></p>}
       <ul className="player-grid">
-        {page === 0 && <li><AvatarPortrait id={profile.avatar_id} /><strong>{profile.nickname}</strong><small>{t.logged}</small></li>}
-        {otherCards.map((card) => <li key={card.user_id}><AvatarPortrait id={card.avatar_id} /><strong>{card.nickname}</strong></li>)}
+        {page === 0 && <li><AvatarPortrait id={profile.avatar_id} look={profile.avatar_look} /><strong>{profile.nickname}</strong><small>{t.logged}</small></li>}
+        {otherCards.map((card) => <li key={card.user_id}><AvatarPortrait id={card.avatar_id} look={card.avatar_look} /><strong>{card.nickname}</strong></li>)}
       </ul>
       {result && otherCards.length === 0 && <p>{t.empty}</p>}
       {(page > 0 || result?.hasMore) && <div className="account-tabs">
